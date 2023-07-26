@@ -9,6 +9,7 @@ import os
 
 from .fairseq_decoder import FairseqDecoder
 from .fairseq_encoder import FairseqEncoder
+from .fairseq_tags_encoder import FairseqTagsEncoder
 from .fairseq_incremental_decoder import FairseqIncrementalDecoder
 from .fairseq_model import (
     BaseFairseqModel,
@@ -35,6 +36,7 @@ __all__ = [
     'DistributedFairseqModel',
     'FairseqDecoder',
     'FairseqEncoder',
+    'FairseqTagsEncoder',
     'FairseqEncoderDecoderModel',
     'FairseqEncoderModel',
     'FairseqIncrementalDecoder',
