@@ -373,7 +373,7 @@ class FairseqTagsModel(BaseFairseqModel):
     def forward_decoder(self, prev_output_tokens, **kwargs):
         return self.decoder(prev_output_tokens, **kwargs)
 
-    def extract_features(self, src_tokens, src_lengths, prev_output_tokens, **kwargs):
+    def extract_features(self, src_tokens, src_lengths, src_tags, prev_output_tokens, **kwargs):
         """
         Similar to *forward* but only return features.
 
@@ -382,7 +382,7 @@ class FairseqTagsModel(BaseFairseqModel):
                 - the decoder's features of shape `(batch, tgt_len, embed_dim)`
                 - a dictionary with any model-specific outputs
         """
-        encoder_out = self.encoder(src_tokens, src_lengths=src_lengths, **kwargs)
+        encoder_out = self.encoder(src_tokens, src_lengths=src_lengths, src_tags=src_tags, **kwargs)
         features = self.decoder.extract_features(
             prev_output_tokens, encoder_out=encoder_out, **kwargs
         )

@@ -65,4 +65,4 @@ mkdir -p $CKPTS
 #  n=$[n + GPUS]
 #done
 
-python train.py
+python train.py $params

@@ -159,7 +159,7 @@ def load_langpair_dataset(
     return TagsLanguagePairDataset(
         src_dataset, src_dataset.sizes, src_dict,
         tgt_dataset, tgt_dataset_sizes, tgt_dict,
-        src_tags_dataset, src_tags_datasets.sizes, src_tags_dict,
+        src_tags_dataset, src_tags_dataset.sizes, src_tags_dict,
         left_pad_source=left_pad_source,
         left_pad_target=left_pad_target,
         align_dataset=align_dataset, eos=eos,
@@ -168,7 +168,7 @@ def load_langpair_dataset(
 
 
 @register_task('tags_translation')
-class TranslationTask(FairseqTask):
+class TagsTranslationTask(FairseqTask):
     """
     Translate from one (source) language to another (target) language.
 
@@ -295,7 +295,7 @@ class TranslationTask(FairseqTask):
         src, tgt = self.args.source_lang, self.args.target_lang
 
         self.datasets[split] = load_langpair_dataset(
-            data_path, split, src, self.src_dict, tgt, self.tgt_dict,
+            data_path, self.args.tags_data[0], split, src, self.src_dict, self.src_tags_dict, tgt, self.tgt_dict,
             combine=combine, dataset_impl=self.args.dataset_impl,
             upsample_primary=self.args.upsample_primary,
             left_pad_source=self.args.left_pad_source,
@@ -393,6 +393,11 @@ class TranslationTask(FairseqTask):
     def target_dictionary(self):
         """Return the target :class:`~fairseq.data.Dictionary`."""
         return self.tgt_dict
+
+    @property
+    def source_tags_dictionary(self):
+        """Return the source tags :class:`~fairseq.data.Dictionary`."""
+        return self.src_tags_dict
 
     def _inference_with_bleu(self, generator, sample, model):
         import sacrebleu

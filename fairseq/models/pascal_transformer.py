@@ -14,6 +14,7 @@ from fairseq.models import (
     FairseqEncoder,
     FairseqTagsEncoder,
     FairseqEncoderDecoderModel,
+    FairseqTagsModel,
     FairseqIncrementalDecoder,
     register_model,
     register_model_architecture,
@@ -31,14 +32,14 @@ from fairseq.modules import (
 )
 from fairseq.modules.quant_noise import quant_noise as apply_quant_noise_
 from torch import Tensor
-
+import numpy as np
 
 DEFAULT_MAX_SOURCE_POSITIONS = 1024
 DEFAULT_MAX_TARGET_POSITIONS = 1024
 
 
 @register_model("pascal_transformer")
-class PascalTransformerModel(FairseqEncoderDecoderModel):
+class PascalTransformerModel(FairseqTagsModel):
     """
     Transformer model from `"Attention Is All You Need" (Vaswani, et al, 2017)
     <https://arxiv.org/abs/1706.03762>`_.
@@ -118,6 +119,14 @@ class PascalTransformerModel(FairseqEncoderDecoderModel):
                             help='num encoder attention heads')
         parser.add_argument('--encoder-normalize-before', action='store_true',
                             help='apply layernorm before each encoder block')
+        parser.add_argument('--encoder-pascal-heads', default=None, type=int, nargs='+',
+                            help='list of parent-scaled self-attention heads per layer')
+        parser.add_argument('--pascal-weight-fn', default='normal', type=str, choices=['normal', 'uniform'],
+                            help='weight function for parent tokens in Pascal')
+        parser.add_argument('--pascal-weight-param', default=1, type=float,
+                            help='parameter of Pascal weight function (std or window size)')
+        parser.add_argument('--parent-ignoring', default=0.0, type=float,
+                            help='dropout probability for dependencies in Pascal heads')
         parser.add_argument('--encoder-learned-pos', action='store_true',
                             help='use learned positional embeddings in the encoder')
         parser.add_argument('--decoder-embed-path', type=str, metavar='STR',
@@ -256,6 +265,7 @@ class PascalTransformerModel(FairseqEncoderDecoderModel):
         self,
         src_tokens,
         src_lengths,
+        src_tags,
         prev_output_tokens,
         return_all_hiddens: bool = True,
         features_only: bool = False,
@@ -269,7 +279,7 @@ class PascalTransformerModel(FairseqEncoderDecoderModel):
         which are not supported by TorchScript.
         """
         encoder_out = self.encoder(
-            src_tokens, src_lengths=src_lengths, return_all_hiddens=return_all_hiddens
+            src_tokens, src_lengths=src_lengths, src_tags=src_tags, return_all_hiddens=return_all_hiddens
         )
         decoder_out = self.decoder(
             prev_output_tokens,
@@ -389,7 +399,7 @@ class PascalTransformerEncoder(FairseqTagsEncoder):
             x = self.quant_noise(x)
         return x, embed
 
-    def forward(self, src_tokens, src_lengths, return_all_hiddens: bool = False):
+    def forward(self, src_tokens, src_lengths, src_tags, return_all_hiddens: bool = False):
         """
         Args:
             src_tokens (LongTensor): tokens in the source language of shape
@@ -419,14 +429,24 @@ class PascalTransformerEncoder(FairseqTagsEncoder):
         # compute padding mask
         encoder_padding_mask = src_tokens.eq(self.padding_idx)
 
+        maxlen = src_tags.size(1) - 1
+        parents = torch.cuda.FloatTensor(np.vectorize(lambda e: self.map_dictionary.get(e, maxlen))(src_tags))
+
         encoder_states = [] if return_all_hiddens else None
 
         # encoder layers
-        for layer in self.layers:
-            x = layer(x, encoder_padding_mask)
-            if return_all_hiddens:
-                assert encoder_states is not None
-                encoder_states.append(x)
+        # for layer in self.layers:
+        #     x = layer(x, encoder_padding_mask)
+        #     if return_all_hiddens:
+        #         assert encoder_states is not None
+        #         encoder_states.append(x)
+
+        for i, h in enumerate(self.encoder_pascal_heads):
+            if h != 0:
+                x = self.layers[i](x, encoder_padding_mask, parents)
+            else:
+                x = self.layers[i](x, encoder_padding_mask)
+
 
         if self.layer_norm is not None:
             x = self.layer_norm(x)
@@ -914,7 +934,7 @@ def Linear(in_features, out_features, bias=True):
     return m
 
 
-@register_model_architecture("transformer", "transformer")
+@register_model_architecture("pascal_transformer", "pascal_transformer")
 def base_architecture(args):
     args.encoder_embed_path = getattr(args, "encoder_embed_path", None)
     args.encoder_embed_dim = getattr(args, "encoder_embed_dim", 512)
@@ -959,7 +979,7 @@ def base_architecture(args):
     args.tie_adaptive_weights = getattr(args, "tie_adaptive_weights", False)
 
 
-@register_model_architecture("transformer", "transformer_iwslt_de_en")
+@register_model_architecture("pascal_transformer", "pascal_transformer_iwslt_de_en")
 def transformer_iwslt_de_en(args):
     args.encoder_embed_dim = getattr(args, "encoder_embed_dim", 512)
     args.encoder_ffn_embed_dim = getattr(args, "encoder_ffn_embed_dim", 1024)
@@ -972,13 +992,13 @@ def transformer_iwslt_de_en(args):
     base_architecture(args)
 
 
-@register_model_architecture("transformer", "transformer_wmt_en_de")
+@register_model_architecture("pascal_transformer", "pascal_transformer_wmt_en_de")
 def transformer_wmt_en_de(args):
     base_architecture(args)
 
 
 # parameters used in the "Attention Is All You Need" paper (Vaswani et al., 2017)
-@register_model_architecture("transformer", "transformer_vaswani_wmt_en_de_big")
+@register_model_architecture("pascal_transformer", "pascal_transformer_vaswani_wmt_en_de_big")
 def transformer_vaswani_wmt_en_de_big(args):
     args.encoder_embed_dim = getattr(args, "encoder_embed_dim", 1024)
     args.encoder_ffn_embed_dim = getattr(args, "encoder_ffn_embed_dim", 4096)
@@ -991,20 +1011,20 @@ def transformer_vaswani_wmt_en_de_big(args):
     base_architecture(args)
 
 
-@register_model_architecture("transformer", "transformer_vaswani_wmt_en_fr_big")
+@register_model_architecture("pascal_transformer", "pascal_transformer_vaswani_wmt_en_fr_big")
 def transformer_vaswani_wmt_en_fr_big(args):
     args.dropout = getattr(args, "dropout", 0.1)
     transformer_vaswani_wmt_en_de_big(args)
 
 
-@register_model_architecture("transformer", "transformer_wmt_en_de_big")
+@register_model_architecture("pascal_transformer", "pascal_transformer_wmt_en_de_big")
 def transformer_wmt_en_de_big(args):
     args.attention_dropout = getattr(args, "attention_dropout", 0.1)
     transformer_vaswani_wmt_en_de_big(args)
 
 
 # default parameters used in tensor2tensor implementation
-@register_model_architecture("transformer", "transformer_wmt_en_de_big_t2t")
+@register_model_architecture("pascal_transformer", "pascal_transformer_wmt_en_de_big_t2t")
 def transformer_wmt_en_de_big_t2t(args):
     args.encoder_normalize_before = getattr(args, "encoder_normalize_before", True)
     args.decoder_normalize_before = getattr(args, "decoder_normalize_before", True)

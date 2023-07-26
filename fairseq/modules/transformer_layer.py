@@ -190,7 +190,6 @@ class PascalTransformerEncoderLayer(nn.Module):
             dropout=args.attention_dropout,
             parent_ignoring=args.parent_ignoring,
             num_pascal_heads=self.num_pascal_heads,
-            weight_pascal_heads=self.num_pascal_heads,
             weight_fn=args.pascal_weight_fn,
             weight_param=args.pascal_weight_param,
             self_attention=True,

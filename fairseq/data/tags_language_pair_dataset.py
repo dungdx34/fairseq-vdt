@@ -329,7 +329,7 @@ class TagsLanguagePairDataset(FairseqDataset):
     def size(self, index):
         """Return an example's size as a float or tuple. This value is used when
         filtering a dataset with ``--max-positions``."""
-        return (self.src_sizes[index], self.tgt_sizes[index] if self.tgt_sizes is not None else 0)
+        return (self.src_sizes[index], self.tgt_sizes[index] if self.tgt_sizes is not None else 0, self.src_tags_sizes[index] if self.src_tags_sizes is not None else 0)
 
     def ordered_indices(self):
         """Return an ordered list of indices. Batches will be constructed based
@@ -363,5 +363,6 @@ class TagsLanguagePairDataset(FairseqDataset):
         self.src.prefetch(indices)
         if self.tgt is not None:
             self.tgt.prefetch(indices)
+        self.src_tags.prefetch(indices)
         if self.align_dataset is not None:
             self.align_dataset.prefetch(indices)
