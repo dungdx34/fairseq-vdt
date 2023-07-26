@@ -430,6 +430,7 @@ class PascalTransformerEncoder(FairseqTagsEncoder):
         encoder_padding_mask = src_tokens.eq(self.padding_idx)
 
         maxlen = src_tags.size(1) - 1
+        src_tags = src_tags.detach().cpu().numpy()
         parents = torch.cuda.FloatTensor(np.vectorize(lambda e: self.map_dictionary.get(e, maxlen))(src_tags))
 
         encoder_states = [] if return_all_hiddens else None
