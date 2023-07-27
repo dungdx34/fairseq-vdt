@@ -5,6 +5,11 @@
 """
 Base classes for various fairseq models.
 """
+"""
+Created by:         Dung Doan
+Date created:       26/7/2023
+Date last modified: 
+"""
 
 import logging
 from typing import Dict, List, Optional, Tuple
