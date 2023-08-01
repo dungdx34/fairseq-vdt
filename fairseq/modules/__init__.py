@@ -24,6 +24,8 @@ from .lightweight_convolution import LightweightConv, LightweightConv1dTBC
 from .linearized_convolution import LinearizedConvolution
 from .multihead_attention import MultiheadAttention
 from .multihead_pascal import MultiheadPascal
+from .multihead_tpr_attention import MultiheadTPRAttention
+from .tpr_transformer_layer import TPRTransformerDecoderLayer, TPRTransformerEncoderLayer
 from .positional_embedding import PositionalEmbedding
 from .scalar_bias import ScalarBias
 from .sinusoidal_positional_embedding import SinusoidalPositionalEmbedding
@@ -68,4 +70,7 @@ __all__ = [
     'PascalTransformerEncoderLayer',
     'VGGBlock',
     'unfold1d',
+    'MultiheadTPRAttention',
+    'TPRTransformerDecoderLayer',
+    'TPRTransformerEncoderLayer'
 ]
