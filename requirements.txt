@@ -17,7 +17,6 @@ de-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/de
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
 entrypoints==0.4
 exceptiongroup==1.1.1
--e git+https://github.com/dungdx34/fairseq-vdt.git@8055e172847600dbe512c9b0aa9e6a3eca36d5f3#egg=fairseq
 fasttext==0.9.2
 filelock==3.12.0
 fsspec==2023.4.0
