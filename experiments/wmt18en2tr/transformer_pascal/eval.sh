@@ -7,21 +7,21 @@
 export CUDA_VISIBLE_DEVICES=0
 src=en
 tgt=tr
-PROJ_PATH=$HOME/pascal/experiments/wmt18${src}2${tgt}
-DATA_PATH=
-TAGS_PATH=
-CKPT_PATH=
+PROJ_PATH=/home/hnc/PycharmProjects/fairseq-vdt/experiments/wmt18${src}2${tgt}
+DATA_PATH=/home/hnc/PycharmProjects/fairseq-vdt/data/wmt18tren/corpus/wmt18en2tr
+TAGS_PATH=/home/hnc/PycharmProjects/fairseq-vdt/data/wmt18tren/tags_mean/wmt18en2tr
+CKPT_PATH=/home/hnc/PycharmProjects/fairseq-vdt/models
 MODEL_DIR=$PROJ_PATH/transformer_pascal
 OUTPUT_FN=$MODEL_DIR/res.txt
-mosesdecoder=$HOME/pascal/tools/mosesdecoder
+mosesdecoder=/home/hnc/PycharmProjects/mosesdecoder
 
-export PATH="$HOME/libs/anaconda3/bin:$PATH"
-. $HOME/libs/anaconda3/etc/profile.d/conda.sh
+#export PATH="$HOME/libs/anaconda3/bin:$PATH"
+#. $HOME/libs/anaconda3/etc/profile.d/conda.sh
 
-conda activate pascal
+#conda activate pascal
 
 mkdir -p $MODEL_DIR/outputs
-cd $HOME/pascal/fairseq
+cd /home/hnc/PycharmProjects/fairseq-vdt/fairseq_cli
 
 for split in valid test; do
   python generate.py $DATA_PATH \
@@ -66,4 +66,4 @@ done
 
 rm $OUTPUT_FN
 
-conda deactivate
+#conda deactivate

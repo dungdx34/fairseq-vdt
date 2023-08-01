@@ -6,7 +6,7 @@
 
 src=en
 tgt=tr
-PROJ=$HOME/pascal
+PROJ=/home/hnc/PycharmProjects/fairseq-vdt
 TEXT=$PROJ/data/wmt18tren/corpus
 TAGS=$PROJ/data/wmt18tren/lin_parses
 OUT=$PROJ/data/wmt18tren/corpus_lin_parses/${src}2${tgt}
@@ -60,10 +60,10 @@ for merge_ops in 16000; do
 done
 
 # activate environment
-source activate pascal
+#source activate pascal
 
 # Binarize the dataset:
-cd $PROJ/fairseq
+cd $PROJ/fairseq_cli
 python preprocess.py \
 	--source-lang $src \
 	--target-lang $tgt \
@@ -77,4 +77,4 @@ python preprocess.py \
         --joined-dictionary
 
 # deactivate environment
-conda deactivate
+#conda deactivate

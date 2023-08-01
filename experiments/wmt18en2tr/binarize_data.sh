@@ -6,15 +6,15 @@
 
 src=en
 tgt=tr
-PROJ=$HOME/pascal
+PROJ=/home/hnc/PycharmProjects/fairseq-vdt
 INPUT=$PROJ/data/wmt18tren/corpus
 OUTPUT=$INPUT/wmt18${src}2${tgt}
 
 # activate environment
-source activate pascal
+#source activate pascal
 
 # Binarize the dataset:
-cd $PROJ/fairseq
+cd $PROJ/fairseq_cli
 python preprocess.py \
 	--source-lang $src \
 	--target-lang $tgt \
@@ -28,4 +28,4 @@ python preprocess.py \
 	--joined-dictionary
 
 # deactivate environment
-conda deactivate
+#conda deactivate

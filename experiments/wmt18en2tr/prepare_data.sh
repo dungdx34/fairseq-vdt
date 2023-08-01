@@ -17,14 +17,14 @@
 # Modified by:        Emanuele Bugliarello (@e-bug)
 # Date last modified: 9/4/2019
 
-PROJ_DIR="$HOME/pascal"
+PROJ_DIR="/home/hnc/PycharmProjects/fairseq-vdt"
 OUTPUT_DIR="$PROJ_DIR/data/wmt18tren/corpus"
 MOSES_DIR="$PROJ_DIR/tools/mosesdecoder"
 BPE_DIR="$PROJ_DIR/tools/subword-nmt"
-SCRIPTS_DIR="$PROJ_DIR/scripts"
+SCRIPTS_DIR="$PROJ_DIR/scripts_pascal"
 
 # activate environment
-source activate pascal
+#source activate pascal
 
 mkdir -p $OUTPUT_DIR
 
@@ -77,4 +77,4 @@ done
 
 echo "All done."
 
-conda deactivate
+#conda deactivate

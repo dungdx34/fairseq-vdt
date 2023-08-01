@@ -6,7 +6,7 @@
 
 src=en
 tgt=tr
-PROJ=$HOME/pascal
+PROJ=/home/hnc/PycharmProjects/fairseq-vdt/pascal
 INPUT=$PROJ/data/wmt18tren/tags_mean
 OUTPUT=$INPUT/wmt18${src}2${tgt}
 

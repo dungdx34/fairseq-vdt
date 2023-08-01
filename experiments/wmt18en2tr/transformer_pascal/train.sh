@@ -4,9 +4,9 @@
 # Date created:       9/4/2019
 # Date last modified: 9/4/2019
 
-DATADIR=C:\Users\xuand\PycharmProjects\fairseq-vdt\data\wmt18tren\corpus\wmt18en2tr
-TAGSDIR=C:\Users\xuand\PycharmProjects\fairseq-vdt\data\wmt18tren\tags_mean\wmt18en2tr
-CKPTS=C:\Users\xuand\PycharmProjects\fairseq-vdt\models
+DATADIR=/home/hnc/PycharmProjects/fairseq-vdt/data/wmt18tren/corpus/wmt18en2tr
+TAGSDIR=/home/hnc/PycharmProjects/fairseq-vdt/data/wmt18tren/tags_mean/wmt18en2tr
+CKPTS=/home/hnc/PycharmProjects/fairseq-vdt/models
 #export CUDA_VISIBLE_DEVICES=0,1,2,3
 
 #NODES=$1

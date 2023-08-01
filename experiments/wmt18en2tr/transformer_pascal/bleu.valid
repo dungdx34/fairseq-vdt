@@ -1,1 +1,12 @@
-BLEU+case.mixed+lang.en-tr+numrefs.1+smooth.exp+test.wmt16+tok.13a+version.1.2.12 = 13.7 43.9/18.3/9.0/4.8 (BP = 1.000 ratio = 1.001 hyp_len = 50839 ref_len = 50782)
+{
+ "name": "BLEU",
+ "score": 0.0,
+ "signature": "nrefs:1|case:mixed|eff:no|tok:13a|smooth:exp|version:2.3.1",
+ "verbose_score": "3.0/0.1/0.0/0.0 (BP = 1.000 ratio = 3.676 hyp_len = 186695 ref_len = 50782)",
+ "nrefs": "1",
+ "case": "mixed",
+ "eff": "no",
+ "tok": "13a",
+ "smooth": "exp",
+ "version": "2.3.1"
+}
