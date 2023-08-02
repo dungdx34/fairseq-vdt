@@ -25,6 +25,7 @@ from .linearized_convolution import LinearizedConvolution
 from .multihead_attention import MultiheadAttention
 from .multihead_pascal import MultiheadPascal
 from .multihead_tpr_attention import MultiheadTPRAttention
+from .multihead_tpr_pascal import MultiheadTPRPascal
 from .tpr_transformer_layer import TPRTransformerDecoderLayer, TPRTransformerEncoderLayer
 from .positional_embedding import PositionalEmbedding
 from .scalar_bias import ScalarBias
@@ -33,6 +34,7 @@ from .transformer_sentence_encoder_layer import TransformerSentenceEncoderLayer
 from .transformer_sentence_encoder import TransformerSentenceEncoder
 from .unfold import unfold1d
 from .transformer_layer import TransformerDecoderLayer, TransformerEncoderLayer, PascalTransformerEncoderLayer
+from .tpr_pascal_transformer_layer import TPRPascalTransformerEncoderLayer
 from .vggblock import VGGBlock
 
 __all__ = [
@@ -70,7 +72,10 @@ __all__ = [
     'PascalTransformerEncoderLayer',
     'VGGBlock',
     'unfold1d',
+    'MultiheadPascal',
     'MultiheadTPRAttention',
+    'MultiheadTPRPascal',
     'TPRTransformerDecoderLayer',
-    'TPRTransformerEncoderLayer'
+    'TPRTransformerEncoderLayer',
+    'TPRPascalTransformerEncoderLayer'
 ]

@@ -20,8 +20,9 @@ from fairseq.incremental_decoding_utils import with_incremental_state
 from fairseq.modules.quant_noise import quant_noise
 import numpy as np
 
+
 @with_incremental_state
-class MultiheadPascalTPR(nn.Module):
+class MultiheadTPRPascal(nn.Module):
     """Multi-headed attention.
 
     See "Attention Is All You Need" for more details.
@@ -32,7 +33,7 @@ class MultiheadPascalTPR(nn.Module):
         embed_dim,
         num_heads,
         num_pascal_heads,
-        num_roles=50,
+        num_roles=None,
         weight_fn='normal',
         weight_param=1,
         kdim=None,
@@ -76,8 +77,12 @@ class MultiheadPascalTPR(nn.Module):
         self.v_proj = quant_noise(nn.Linear(self.vdim, embed_dim, bias=bias), q_noise, qn_block_size)
         self.q_proj = quant_noise(nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size)
 
-        self.role_proj = quant_noise(nn.Linear(embed_dim, self.num_heads * self.num_roles, bias=False), q_noise, qn_block_size)
-        self.role_embeddings = nn.Parameter(torch.zeros(self.num_roles, self.head_dim))
+        if self.num_roles is None:
+            self.role_proj = quant_noise(nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size)
+        else:
+            self.role_proj = quant_noise(nn.Linear(embed_dim, self.num_heads * self.num_roles, bias=False), q_noise,
+                                         qn_block_size)
+            self.role_embeddings = nn.Parameter(torch.zeros(self.num_roles, self.head_dim))
 
         self.out_proj = quant_noise(nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size)
 
@@ -119,7 +124,9 @@ class MultiheadPascalTPR(nn.Module):
             nn.init.xavier_uniform_(self.q_proj.weight)
 
         nn.init.xavier_uniform_(self.role_proj.weight)
-        nn.init.xavier_uniform_(self.role_embeddings)
+        if self.num_roles is not None:
+            nn.init.xavier_uniform_(self.role_embeddings)
+
         nn.init.xavier_uniform_(self.out_proj.weight)
         if self.out_proj.bias is not None:
             nn.init.constant_(self.out_proj.bias, 0.)
@@ -265,7 +272,7 @@ class MultiheadPascalTPR(nn.Module):
             if "prev_key_padding_mask" in saved_state:
                 prev_key_padding_mask = saved_state["prev_key_padding_mask"]
             assert k is not None and v is not None
-            key_padding_mask = MultiheadPascalTPR._append_prev_key_padding_mask(
+            key_padding_mask = MultiheadTPRPascal._append_prev_key_padding_mask(
                 key_padding_mask=key_padding_mask,
                 prev_key_padding_mask=prev_key_padding_mask,
                 batch_size=bsz,
@@ -312,7 +319,7 @@ class MultiheadPascalTPR(nn.Module):
                 )
 
         attn_weights = torch.bmm(q, k.transpose(1, 2))
-        attn_weights = MultiheadPascalTPR.apply_sparse_mask(attn_weights, tgt_len, src_len, bsz)
+        attn_weights = MultiheadTPRPascal.apply_sparse_mask(attn_weights, tgt_len, src_len, bsz)
 
         assert list(attn_weights.size()) == [bsz * self.num_heads, tgt_len, src_len]
 
@@ -359,6 +366,12 @@ class MultiheadPascalTPR(nn.Module):
         assert v is not None
         attn = torch.bmm(attn_probs, v)
         assert list(attn.size()) == [bsz * self.num_heads, tgt_len, self.head_dim]
+        # TP Transformer product
+        if self.num_roles is None:
+            R = self.role_proj(query)
+            R = R.contiguous().view(tgt_len, bsz * self.num_heads, self.head_dim).transpose(0, 1)
+            attn = torch.mul(attn, R)
+
         if self.onnx_trace and attn.size(1) == 1:
             # when ONNX tracing a single decoder step (sequence length == 1)
             # the transpose is a no-op copy before view, thus unnecessary
@@ -366,17 +379,18 @@ class MultiheadPascalTPR(nn.Module):
         else:
             attn = attn.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
 
-        role_matrix = self.role_embeddings / torch.norm(self.role_embeddings, dim=1,
-                                                        keepdim=True)  # normalize role embeddings
-        role_attn_weights = self.role_proj(attn)  # (tgt_len, bsz, num_heads*num_roles)
-        role_attn_weights = role_attn_weights \
-            .contiguous() \
-            .view(tgt_len, bsz * self.num_heads, self.num_roles) \
-            .transpose(0, 1)
-        role_attn_weights = F.softmax(role_attn_weights, dim=-1)
-        R_out = torch.matmul(role_attn_weights, role_matrix)  # (bsz * num_heads, tgt_len, head_dim)
-        R_out = R_out.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
-        attn = attn + torch.mul(R_out, attn)
+        if self.num_roles is not None:
+            role_matrix = self.role_embeddings / torch.norm(self.role_embeddings, dim=1,
+                                                            keepdim=True)  # normalize role embeddings
+            role_attn_weights = self.role_proj(attn)  # (tgt_len, bsz, num_heads*num_roles)
+            role_attn_weights = role_attn_weights \
+                .contiguous() \
+                .view(tgt_len, bsz * self.num_heads, self.num_roles) \
+                .transpose(0, 1)
+            role_attn_weights = F.softmax(role_attn_weights, dim=-1)
+            R_out = torch.matmul(role_attn_weights, role_matrix)  # (bsz * num_heads, tgt_len, head_dim)
+            R_out = R_out.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
+            attn = attn + torch.mul(R_out, attn)
 
         attn = self.out_proj(attn)
         attn_weights: Optional[Tensor] = None
@@ -474,8 +488,8 @@ class MultiheadPascalTPR(nn.Module):
                 # in_proj_weight used to be q + k + v with same dimensions
                 dim = int(state_dict[k].shape[0] / 3)
                 items_to_add[prefix + "q_proj.weight"] = state_dict[k][:dim]
-                items_to_add[prefix + "k_proj.weight"] = state_dict[k][dim : 2 * dim]
-                items_to_add[prefix + "v_proj.weight"] = state_dict[k][2 * dim :]
+                items_to_add[prefix + "k_proj.weight"] = state_dict[k][dim: 2 * dim]
+                items_to_add[prefix + "v_proj.weight"] = state_dict[k][2 * dim:]
 
                 keys_to_remove.append(k)
 
@@ -484,9 +498,9 @@ class MultiheadPascalTPR(nn.Module):
                     dim = int(state_dict[k].shape[0] / 3)
                     items_to_add[prefix + "q_proj.bias"] = state_dict[k_bias][:dim]
                     items_to_add[prefix + "k_proj.bias"] = state_dict[k_bias][
-                        dim : 2 * dim
+                        dim: 2 * dim
                     ]
-                    items_to_add[prefix + "v_proj.bias"] = state_dict[k_bias][2 * dim :]
+                    items_to_add[prefix + "v_proj.bias"] = state_dict[k_bias][2 * dim:]
 
                     keys_to_remove.append(prefix + "in_proj_bias")
 

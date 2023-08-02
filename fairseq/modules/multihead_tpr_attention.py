@@ -113,6 +113,7 @@ class MultiheadTPRAttention(nn.Module):
         nn.init.xavier_uniform_(self.role_proj.weight)
         if self.num_roles is not None:
             nn.init.xavier_uniform_(self.role_embeddings)
+
         nn.init.xavier_uniform_(self.out_proj.weight)
         if self.out_proj.bias is not None:
             nn.init.constant_(self.out_proj.bias, 0.)
