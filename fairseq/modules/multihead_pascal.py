@@ -93,6 +93,7 @@ class MultiheadPascal(nn.Module):
             self.weight_fn = self.normpdf
         elif weight_fn == 'uniform':
             self.weight_fn = self.unipdf
+        self.weight_param = weight_param
 
     def prepare_for_onnx_export_(self):
         self.onnx_trace = True
@@ -166,39 +167,39 @@ class MultiheadPascal(nn.Module):
         assert embed_dim == self.embed_dim
         assert list(query.size()) == [tgt_len, bsz, embed_dim]
 
-        if (
-            not self.onnx_trace
-            and not self.tpu  # don't use PyTorch version on TPUs
-            and incremental_state is None
-            and not static_kv
-            # A workaround for quantization to work. Otherwise JIT compilation
-            # treats bias in linear module as method.
-            and not torch.jit.is_scripting()
-        ):
-            assert key is not None and value is not None
-            return F.multi_head_attention_forward(
-                query,
-                key,
-                value,
-                self.embed_dim,
-                self.num_heads,
-                torch.empty([0]),
-                torch.cat((self.q_proj.bias, self.k_proj.bias, self.v_proj.bias)),
-                self.bias_k,
-                self.bias_v,
-                self.add_zero_attn,
-                self.dropout,
-                self.out_proj.weight,
-                self.out_proj.bias,
-                self.training,
-                key_padding_mask,
-                need_weights,
-                attn_mask,
-                use_separate_proj_weight=True,
-                q_proj_weight=self.q_proj.weight,
-                k_proj_weight=self.k_proj.weight,
-                v_proj_weight=self.v_proj.weight,
-            )
+        # if (
+        #     not self.onnx_trace
+        #     and not self.tpu  # don't use PyTorch version on TPUs
+        #     and incremental_state is None
+        #     and not static_kv
+        #     # A workaround for quantization to work. Otherwise JIT compilation
+        #     # treats bias in linear module as method.
+        #     and not torch.jit.is_scripting()
+        # ):
+        #     assert key is not None and value is not None
+        #     return F.multi_head_attention_forward(
+        #         query,
+        #         key,
+        #         value,
+        #         self.embed_dim,
+        #         self.num_heads,
+        #         torch.empty([0]),
+        #         torch.cat((self.q_proj.bias, self.k_proj.bias, self.v_proj.bias)),
+        #         self.bias_k,
+        #         self.bias_v,
+        #         self.add_zero_attn,
+        #         self.dropout,
+        #         self.out_proj.weight,
+        #         self.out_proj.bias,
+        #         self.training,
+        #         key_padding_mask,
+        #         need_weights,
+        #         attn_mask,
+        #         use_separate_proj_weight=True,
+        #         q_proj_weight=self.q_proj.weight,
+        #         k_proj_weight=self.k_proj.weight,
+        #         v_proj_weight=self.v_proj.weight,
+        #     )
 
         if incremental_state is not None:
             saved_state = self._get_input_buffer(incremental_state)

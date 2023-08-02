@@ -174,7 +174,7 @@ class TPRTransformerModel(FairseqEncoderDecoderModel):
         parser.add_argument('--quant-noise-scalar', type=float, metavar='D', default=0,
                             help='scalar quantization noise and scalar quantization at training time')
         # args for TPR transformer
-        parser.add_argument('--num_roles', type=int, metavar='N', default=50,
+        parser.add_argument('--num_roles', type=int, metavar='N', default=None,
                             help='number of roles embedded in role embeddings')
         # fmt: on
 
