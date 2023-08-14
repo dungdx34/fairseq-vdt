@@ -26,9 +26,7 @@ if __name__ == "__main__":
     vncorenlp_path = "F:/MyDocuments/VnCoreNLP-master/VnCoreNLP-1.2.jar"
     parser = VnCoreNLP(vncorenlp_path)
 
-    pool = multiprocessing.Pool()
-    vi_tok = pool.map(tokenize_vi, vi_lines)
-    pool.close()
+    vi_tok = list(map(tokenize_vi, vi_lines))
 
     with open(path + '.tok.vi', 'w', encoding='utf8') as f:
         for line in vi_tok:

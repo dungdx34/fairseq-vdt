@@ -24,9 +24,14 @@ SCRIPTS_DIR="$PROJ_DIR/scripts_pascal"
 # CoreNLP tokenization
 for f in ${OUTPUT_DIR}/*.tok.en; do
   fbase=${f%.*}
-  echo "CoreNLP tokenizing ${fbase}..."
-  python ${SCRIPTS_DIR}/encorenlp_tok.py $fbase &
+  echo "CoreNLP tokenizing ${fbase}.vi..."
   python ${SCRIPTS_DIR}/vncorenlp_tok.py $fbase
+done
+
+for f in ${OUTPUT_DIR}/*.tok.en; do
+  fbase=${f%.*}
+  echo "CoreNLP tokenizing ${fbase}.en..."
+  python ${SCRIPTS_DIR}/encorenlp_tok.py $fbase &
 done
 
 wait
