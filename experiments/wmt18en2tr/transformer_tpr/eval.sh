@@ -15,7 +15,6 @@ OUTPUT_FN=$MODEL_DIR/res.txt
 mosesdecoder=./tools/mosesdecoder
 
 mkdir -p $MODEL_DIR/outputs
-cd $HOME/fairseq-vdt/fairseq_cli
 
 for split in valid test; do
   python ./fairseq_cli/generate.py $DATA_PATH \
