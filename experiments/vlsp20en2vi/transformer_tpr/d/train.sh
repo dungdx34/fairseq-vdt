@@ -16,12 +16,14 @@ params="$DATADIR \
 --arch tpr_transformer \
 --dropout 0.1 \
 --share-all-embeddings \
---optimizer adafactor \
+--optimizer adam \
+--adam-betas \(0.9,0.98\) \
+--adam-eps 1e-09 \
 --clip-norm 0.0 \
 --lr-scheduler inverse_sqrt \
 --warmup-init-lr 1e-07 \
 --warmup-updates 8000 \
---lr 1e-4 \
+--lr 1e-3 \
 --min-lr 1e-09 \
 --weight-decay 0.0 \
 --criterion label_smoothed_cross_entropy \
