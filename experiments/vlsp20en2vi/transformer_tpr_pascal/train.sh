@@ -17,7 +17,7 @@ params="./data/vlsp20envi/corpus/vlsp20en2vi \
 --parent-ignoring 0.3 \
 --share-all-embeddings \
 --optimizer adam \
---adam-betas \(0.9,0.98\) \
+--adam-betas (0.9,0.98) \
 --adam-eps 1e-09 \
 --clip-norm 0.0 \
 --lr-scheduler inverse_sqrt \
