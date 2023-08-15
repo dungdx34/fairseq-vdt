@@ -1,10 +1,16 @@
+#!/bin/bash
+
+# Created by:         Emanuele Bugliarello (@e-bug)
+# Date created:       9/4/2019
+# Date last modified: 9/4/2019
+
 export CUDA_VISIBLE_DEVICES=0
 src=en
 tgt=vi
 PROJ_PATH=./experiments/vlsp20${src}2${tgt}
 DATA_PATH=./data/vlsp20envi/corpus/vlsp20en2vi
-CKPT_PATH=$PROJ_PATH/tpr_pascal_transformer/train_log
-MODEL_DIR=$PROJ_PATH/tpr_pascal_transformer
+CKPT_PATH=$PROJ_PATH/transformer/train_log
+MODEL_DIR=$PROJ_PATH/transformer
 OUTPUT_FN=$MODEL_DIR/res.txt
 mosesdecoder=./tools/mosesdecoder
 
@@ -41,11 +47,10 @@ for split in valid test; do
   rm $MODEL_DIR/outputs/preds.detok.$split $MODEL_DIR/outputs/truth.detok.$split
 
   # Compute BLEU
-  if [ $split == valid ]; then
-    cat $MODEL_DIR/outputs/preds.$split | sacrebleu -t wmt16 -l $src-$tgt > $MODEL_DIR/bleu.$split
-  else
-    cat $MODEL_DIR/outputs/preds.$split | sacrebleu -t wmt17 -l $src-$tgt > $MODEL_DIR/bleu.$split
-  fi
+  cat $MODEL_DIR/outputs/truth.$split | $mosesdecoder/scripts/tokenizer/tokenizer.perl vi > en_vi.ref
+  cat $MODEL_DIR/outputs/preds.$split | $mosesdecoder/scripts/tokenizer/tokenizer.perl vi > en_vi.hyp
+
+  sacrebleu -tok '13a' -s 'exp' en_vi.ref < en_vi.hyp > $MODEL_DIR/bleu.$split
 
 done
 

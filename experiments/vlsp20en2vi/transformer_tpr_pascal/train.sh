@@ -6,10 +6,10 @@
 
 DATADIR=./data/vlsp20envi/corpus/vlsp20en2vi
 TAGSDIR=./data/vlsp20envi/tags_mean/vlsp20en2vi
-CKPTS=./experiments/vlsp20en2vi/tpr_pascal_transformer/train_log
+CKPTS=./experiments/vlsp20en2vi/transformer_tpr_pascal/train_log
 
 params="./data/vlsp20envi/corpus/vlsp20en2vi \
---save-dir ./experiments/vlsp20en2vi/tpr_pascal_transformer/train_log \
+--save-dir ./experiments/vlsp20en2vi/transformer_tpr_pascal/train_log \
 --tags-data ./data/vlsp20envi/tags_mean/vlsp20en2vi \
 --num_roles 50 \
 --encoder-pascal-heads 7 0 0 0 0 0 \
@@ -28,7 +28,7 @@ params="./data/vlsp20envi/corpus/vlsp20en2vi \
 --weight-decay 0.0 \
 --criterion label_smoothed_cross_entropy \
 --label-smoothing 0.1 \
---max-tokens 2048 \
+--max-tokens 4096 \
 --max-update 20000 \
 --no-progress-bar \
 --log-format json \
@@ -38,7 +38,6 @@ params="./data/vlsp20envi/corpus/vlsp20en2vi \
 --keep-interval-updates 1 \
 --arch tpr_pascal_transformer \
 --task tags_translation \
---fp16
 "
 
 mkdir -p $CKPTS
