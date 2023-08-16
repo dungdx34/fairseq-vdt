@@ -17,6 +17,7 @@ from fairseq import utils
 from torch import Tensor, nn
 from torch.nn import Parameter
 from fairseq.incremental_decoding_utils import with_incremental_state
+from fairseq.modules import LayerNorm
 from fairseq.modules.quant_noise import quant_noise
 import numpy as np
 
@@ -83,6 +84,7 @@ class MultiheadTPRPascal(nn.Module):
             self.role_proj = quant_noise(nn.Linear(embed_dim, self.num_heads * self.num_roles, bias=False), q_noise,
                                          qn_block_size)
             self.role_embeddings = nn.Parameter(torch.zeros(self.num_roles, self.head_dim))
+            self.tpr_norm = LayerNorm(embed_dim)
 
         self.out_proj = quant_noise(nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size)
 
@@ -391,6 +393,7 @@ class MultiheadTPRPascal(nn.Module):
             R_out = torch.matmul(role_attn_weights, role_matrix)  # (bsz * num_heads, tgt_len, head_dim)
             R_out = R_out.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
             attn = attn + torch.mul(R_out, attn)
+            attn = self.tpr_norm(attn)
 
         attn = self.out_proj(attn)
         attn_weights: Optional[Tensor] = None
