@@ -34,6 +34,7 @@ class MultiheadTPRPascal(nn.Module):
         embed_dim,
         num_heads,
         num_pascal_heads,
+        role_weights_input,
         num_roles=None,
         weight_fn='normal',
         weight_param=1,
@@ -81,8 +82,10 @@ class MultiheadTPRPascal(nn.Module):
         if self.num_roles is None:
             self.role_proj = quant_noise(nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size)
         else:
-            self.role_proj = quant_noise(nn.Linear(embed_dim, self.num_heads * self.num_roles, bias=False), q_noise,
-                                         qn_block_size)
+            assert role_weights_input in ['query', 'v_bar']
+            self.role_weights_input = role_weights_input
+
+            self.role_proj = quant_noise(nn.Linear(embed_dim, self.num_heads * self.num_roles, bias=True), q_noise, qn_block_size)
             self.role_embeddings = nn.Parameter(torch.zeros(self.num_roles, self.head_dim))
             self.tpr_norm = LayerNorm(embed_dim)
 
@@ -384,7 +387,10 @@ class MultiheadTPRPascal(nn.Module):
         if self.num_roles is not None:
             role_matrix = self.role_embeddings / torch.norm(self.role_embeddings, dim=1,
                                                             keepdim=True)  # normalize role embeddings
-            role_attn_weights = self.role_proj(attn)  # (tgt_len, bsz, num_heads*num_roles)
+            if self.role_weights_input == 'v_bar':
+                role_attn_weights = self.role_proj(attn)  # (tgt_len, bsz, num_heads*num_roles)
+            else:  # role_weights_input is query
+                role_attn_weights = self.role_proj(query)
             role_attn_weights = role_attn_weights \
                 .contiguous() \
                 .view(tgt_len, bsz * self.num_heads, self.num_roles) \
@@ -392,6 +398,7 @@ class MultiheadTPRPascal(nn.Module):
             role_attn_weights = F.softmax(role_attn_weights, dim=-1)
             R_out = torch.matmul(role_attn_weights, role_matrix)  # (bsz * num_heads, tgt_len, head_dim)
             R_out = R_out.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
+            R_out = F.dropout(R_out, p=self.dropout, training=self.training)
             attn = attn + torch.mul(R_out, attn)
             attn = self.tpr_norm(attn)
 

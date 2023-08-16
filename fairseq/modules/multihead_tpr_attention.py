@@ -360,6 +360,7 @@ class MultiheadTPRAttention(nn.Module):
             role_attn_weights = F.softmax(role_attn_weights, dim=-1)
             R_out = torch.matmul(role_attn_weights, role_matrix)  # (bsz * num_heads, tgt_len, head_dim)
             R_out = R_out.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
+            R_out = F.dropout(R_out, p=self.dropout, training=self.training)
             attn = attn + torch.mul(R_out, attn)
             attn = self.tpr_norm(attn)
         # out attention

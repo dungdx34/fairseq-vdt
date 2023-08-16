@@ -6,7 +6,7 @@
 
 DATADIR=./data/vlsp20envi/corpus/vlsp20en2vi
 TAGSDIR=./data/vlsp20envi/tags_mean/vlsp20en2vi
-CKPTS=./experiments/wmt18en2tr/transformer_tpr/d/train_log
+CKPTS=./experiments/vlsp20en2vi/transformer_pascal/train_log
 #export CUDA_VISIBLE_DEVICES=0,1,2,3
 
 #NODES=$1

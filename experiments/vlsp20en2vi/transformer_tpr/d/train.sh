@@ -1,5 +1,5 @@
 DATADIR=./data/vlsp20envi/corpus/vlsp20en2vi
-CKPTS=./experiments/vlsp20envi/transformer_tpr/d/train_log
+CKPTS=./experiments/vlsp20en2vi/transformer_tpr/d/train_log
 #export CUDA_VISIBLE_DEVICES=0,1,2,3
 #
 #NODES=$1

@@ -12,6 +12,7 @@ params="./data/vlsp20envi/corpus/vlsp20en2vi \
 --save-dir ./experiments/vlsp20en2vi/transformer_tpr_pascal/train_log \
 --tags-data ./data/vlsp20envi/tags_mean/vlsp20en2vi \
 --num_roles 50 \
+--role_weights_input query \
 --encoder-pascal-heads 7 0 0 0 0 0 \
 --dropout 0.3 \
 --parent-ignoring 0.3 \
@@ -43,3 +44,5 @@ params="./data/vlsp20envi/corpus/vlsp20en2vi \
 mkdir -p $CKPTS
 
 python train.py $params
+
+read -p "Exit..."

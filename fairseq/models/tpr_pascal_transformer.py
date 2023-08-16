@@ -187,6 +187,8 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         # args for tpr product
         parser.add_argument('--num_roles', type=int, metavar='N', default=None,
                             help='number of roles embedded in role embeddings')
+        parser.add_argument('--role_weights_input', type=str, choices=['query', 'v_bar'],
+                            help='input for role weights embedding')
         # fmt: on
 
     @classmethod

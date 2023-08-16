@@ -71,7 +71,8 @@ class TPRPascalTransformerEncoderLayer(nn.Module):
     def build_self_attention(self, embed_dim, num_roles, args):
         return MultiheadTPRPascal(
             embed_dim,
-            args.encoder_attention_heads,
+            num_heads=args.encoder_attention_heads,
+            role_weights_input=args.role_weights_input,
             num_roles=num_roles,
             dropout=args.attention_dropout,
             parent_ignoring=args.parent_ignoring,
