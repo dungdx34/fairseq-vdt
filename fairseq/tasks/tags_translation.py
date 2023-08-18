@@ -98,28 +98,28 @@ def load_langpair_dataset(
 
         # infer langcode
         if split_exists(split_k, src, tgt, src, tags_data):
-            prefix = os.path.join(data_path, '{}.{}-{}.'.format(split_k, src, tgt))
+            prefix = os.path.join(tags_data, '{}.{}-{}.'.format(split_k, src, tgt))
         elif split_exists(split_k, tgt, src, src, tags_data):
-            prefix = os.path.join(data_path, '{}.{}-{}.'.format(split_k, tgt, src))
+            prefix = os.path.join(tags_data, '{}.{}-{}.'.format(split_k, tgt, src))
         else:
             if k > 0:
                 break
             else:
                 raise FileNotFoundError('Dataset not found: {} ({})'.format(split, tags_data))
 
-        src_dataset = data_utils.load_indexed_dataset(prefix + src, src_tags_dict, dataset_impl)
+        src_tags_dataset = data_utils.load_indexed_dataset(prefix + src, src_tags_dict, dataset_impl)
         if truncate_source:
-            src_dataset = AppendTokenDataset(
+            src_tags_dataset = AppendTokenDataset(
                 TruncateDataset(
-                    StripTokenDataset(src_dataset, src_tags_dict.eos()),
+                    StripTokenDataset(src_tags_dataset, src_tags_dict.eos()),
                     max_source_positions - 1,
                 ),
                 src_dict.eos(),
             )
-        src_tags_datasets.append(src_dataset)
+        src_tags_datasets.append(src_tags_dataset)
 
         logger.info('{} {} {}-{} {} examples'.format(
-            data_path, split_k, src, tgt, len(src_datasets[-1])
+            tags_data, split_k, src, tgt, len(src_tags_datasets[-1])
         ))
 
         if not combine:
