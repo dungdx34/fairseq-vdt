@@ -7,7 +7,7 @@
 src=en
 tgt=vi
 PROJ="."
-INPUT=$PROJ/data/vlsp20envi/corpus
+INPUT=$PROJ/data/vlsp20envi_untok/corpus
 OUTPUT=$INPUT/vlsp20${src}2${tgt}
 
 # Binarize the dataset:

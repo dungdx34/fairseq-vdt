@@ -4,13 +4,13 @@
 # Date created:       9/4/2019
 # Date last modified: 9/4/2019
 
-DATADIR=./data/vlsp20envi/corpus/vlsp20en2vi
-TAGSDIR=./data/vlsp20envi/tags_mean/vlsp20en2vi
-CKPTS=./experiments/vlsp20en2vi/transformer_tpr_pascal/train_log
+DATADIR=./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok
+TAGSDIR=./data/vlsp20envi_untok/tags_mean/vlsp20en2vi_untok
+CKPTS=./experiments/vlsp20en2vi_untok/transformer_tpr_pascal/train_log
 
-params="./data/vlsp20envi/corpus/vlsp20en2vi \
---save-dir ./experiments/vlsp20en2vi/transformer_tpr_pascal/train_log \
---tags-data ./data/vlsp20envi/tags_mean/vlsp20en2vi \
+params="./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok \
+--save-dir ./experiments/vlsp20en2vi_untok/transformer_tpr_pascal/train_log \
+--tags-data ./data/vlsp20envi_untok/tags_mean/vlsp20en2vi_untok \
 --num_roles 50 \
 --role_weights_input query \
 --encoder-pascal-heads 7 0 0 0 0 0 \

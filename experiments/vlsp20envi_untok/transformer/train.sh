@@ -4,8 +4,8 @@
 # Date created:       9/4/2019
 # Date last modified: 9/4/2019
 
-DATADIR=./data/vlsp20envi/corpus/vlsp20en2vi
-CKPTS=./experiments/vlsp20en2vi/transformer/train_log
+DATADIR=./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok
+CKPTS=./experiments/vlsp20en2vi_untok/transformer/train_log
 #export CUDA_VISIBLE_DEVICES=0,1,2,3
 #
 #NODES=$1
