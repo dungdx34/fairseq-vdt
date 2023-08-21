@@ -69,6 +69,7 @@ class TPRTransformerEncoderLayer(nn.Module):
         return MultiheadTPRAttention(
             embed_dim,
             args.encoder_attention_heads,
+            role_weights_input=args.encoder_role_weights_input,
             num_roles=num_roles,
             dropout=args.attention_dropout,
             self_attention=True,
@@ -222,7 +223,8 @@ class TPRTransformerDecoderLayer(nn.Module):
     def build_self_attention(self, embed_dim, num_roles, args, add_bias_kv=False, add_zero_attn=False):
         return MultiheadTPRAttention(
             embed_dim,
-            args.decoder_attention_heads,
+            num_heads=args.decoder_attention_heads,
+            role_weights_input=args.decoder_role_weights_input,
             num_roles=num_roles,
             dropout=args.attention_dropout,
             add_bias_kv=add_bias_kv,
@@ -235,7 +237,8 @@ class TPRTransformerDecoderLayer(nn.Module):
     def build_encoder_attention(self, embed_dim, num_roles, args):
         return MultiheadTPRAttention(
             embed_dim,
-            args.decoder_attention_heads,
+            num_heads=args.decoder_attention_heads,
+            role_weights_input=args.decoder_role_weights_input,
             num_roles=num_roles,
             kdim=getattr(args, "encoder_embed_dim", None),
             vdim=getattr(args, "encoder_embed_dim", None),

@@ -28,6 +28,7 @@ class MultiheadTPRAttention(nn.Module):
         self,
         embed_dim,
         num_heads,
+        role_weights_input,
         num_roles=None,
         kdim=None,
         vdim=None,
@@ -75,7 +76,10 @@ class MultiheadTPRAttention(nn.Module):
         if self.num_roles is None:
             self.role_proj = quant_noise(nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size)
         else:
-            self.role_proj = quant_noise(nn.Linear(embed_dim, self.num_heads * self.num_roles, bias=False), q_noise, qn_block_size)
+            assert role_weights_input in ['query', 'v_bar']
+            self.role_weights_input = role_weights_input
+            self.role_proj = quant_noise(nn.Linear(embed_dim, self.num_heads * self.num_roles, bias=True), q_noise,
+                                         qn_block_size)
             self.role_embeddings = nn.Parameter(torch.zeros(self.num_roles, self.head_dim))
             self.tpr_norm = LayerNorm(embed_dim)
 
@@ -114,7 +118,7 @@ class MultiheadTPRAttention(nn.Module):
 
         nn.init.xavier_uniform_(self.role_proj.weight)
         if self.num_roles is not None:
-            nn.init.xavier_uniform_(self.role_embeddings)
+            nn.init.xavier_uniform_(self.role_embeddings, gain=math.sqrt(2))
 
         nn.init.xavier_uniform_(self.out_proj.weight)
         if self.out_proj.bias is not None:
@@ -352,7 +356,10 @@ class MultiheadTPRAttention(nn.Module):
         # TODO: TP-d Transformer product
         if self.num_roles is not None:
             role_matrix = self.role_embeddings / torch.norm(self.role_embeddings, dim=1, keepdim=True)  # normalize role embeddings
-            role_attn_weights = self.role_proj(attn)  # (tgt_len, bsz, num_heads*num_roles)
+            if self.role_weights_input == 'v_bar':
+                role_attn_weights = self.role_proj(attn)  # (tgt_len, bsz, num_heads*num_roles)
+            else:
+                role_attn_weights = self.role_proj(query)  # (tgt_len, bsz, num_heads*num_roles)
             role_attn_weights = role_attn_weights\
                 .contiguous()\
                 .view(tgt_len, bsz * self.num_heads, self.num_roles)\
