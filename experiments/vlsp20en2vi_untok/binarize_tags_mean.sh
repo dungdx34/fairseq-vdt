@@ -8,7 +8,7 @@ src=en
 tgt=vi
 PROJ="."
 INPUT=$PROJ/data/vlsp20envi_untok/tags_mean
-OUTPUT=$INPUT/vlsp20${src}2${tgt}
+OUTPUT=$INPUT/vlsp20${src}2${tgt}_untok
 
 # Binarize the dataset:
 python fairseq_cli/preprocess.py \
