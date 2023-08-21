@@ -368,7 +368,7 @@ class TPRTransformerEncoder(FairseqEncoder):
 
     @staticmethod
     def build_encoder_layer(args, num_roles):
-        return TPRTransformerEncoderLayer(args, num_roles)
+        return TPRTransformerEncoderLayer(args, num_roles, args.encoder_role_weights_input)
 
     def forward_embedding(self, src_tokens):
         # embed tokens and positions
@@ -643,7 +643,7 @@ class TPRTransformerDecoder(FairseqIncrementalDecoder):
 
     @staticmethod
     def build_decoder_layer(args, num_roles, no_encoder_attn=False):
-        return TPRTransformerDecoderLayer(args, num_roles, no_encoder_attn)
+        return TPRTransformerDecoderLayer(args, num_roles, args.decoder_role_weights_input, no_encoder_attn)
 
     def forward(
         self,

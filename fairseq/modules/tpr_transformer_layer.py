@@ -34,12 +34,12 @@ class TPRTransformerEncoderLayer(nn.Module):
         args (argparse.Namespace): parsed command-line arguments
     """
 
-    def __init__(self, args, num_roles):
+    def __init__(self, args, num_roles, role_weights_input):
         super().__init__()
         self.embed_dim = args.encoder_embed_dim
         self.quant_noise = getattr(args, "quant_noise_pq", 0)
         self.quant_noise_block_size = getattr(args, "quant_noise_pq_block_size", 8)
-        self.self_attn = self.build_self_attention(self.embed_dim, num_roles, args)
+        self.self_attn = self.build_self_attention(self.embed_dim, num_roles, role_weights_input, args)
         self.self_attn_layer_norm = LayerNorm(self.embed_dim)
         self.dropout = args.dropout
         self.activation_fn = utils.get_activation_fn(
@@ -65,11 +65,11 @@ class TPRTransformerEncoderLayer(nn.Module):
     def build_fc2(self, input_dim, output_dim, q_noise, qn_block_size):
         return quant_noise(nn.Linear(input_dim, output_dim), p=q_noise, block_size=qn_block_size)
 
-    def build_self_attention(self, embed_dim, num_roles, args):
+    def build_self_attention(self, embed_dim, num_roles, role_weights_input, args):
         return MultiheadTPRAttention(
             embed_dim,
             args.encoder_attention_heads,
-            role_weights_input=args.encoder_role_weights_input,
+            role_weights_input=role_weights_input,
             num_roles=num_roles,
             dropout=args.attention_dropout,
             self_attention=True,
@@ -162,7 +162,7 @@ class TPRTransformerDecoderLayer(nn.Module):
     """
 
     def __init__(
-        self, args, num_roles, no_encoder_attn=False, add_bias_kv=False, add_zero_attn=False
+        self, args, num_roles, role_weights_input, no_encoder_attn=False, add_bias_kv=False, add_zero_attn=False
     ):
         super().__init__()
         self.embed_dim = args.decoder_embed_dim
@@ -176,6 +176,7 @@ class TPRTransformerDecoderLayer(nn.Module):
         self.self_attn = self.build_self_attention(
             self.embed_dim,
             self.num_roles,
+            role_weights_input,
             args,
             add_bias_kv=add_bias_kv,
             add_zero_attn=add_zero_attn,
@@ -199,7 +200,7 @@ class TPRTransformerDecoderLayer(nn.Module):
             self.encoder_attn = None
             self.encoder_attn_layer_norm = None
         else:
-            self.encoder_attn = self.build_encoder_attention(self.embed_dim, self.num_roles, args)
+            self.encoder_attn = self.build_encoder_attention(self.embed_dim, self.num_roles, role_weights_input, args)
             self.encoder_attn_layer_norm = LayerNorm(self.embed_dim, export=export)
 
         self.fc1 = self.build_fc1(
@@ -220,11 +221,11 @@ class TPRTransformerDecoderLayer(nn.Module):
     def build_fc2(self, input_dim, output_dim, q_noise, qn_block_size):
         return quant_noise(nn.Linear(input_dim, output_dim), q_noise, qn_block_size)
 
-    def build_self_attention(self, embed_dim, num_roles, args, add_bias_kv=False, add_zero_attn=False):
+    def build_self_attention(self, embed_dim, num_roles, role_weights_input, args, add_bias_kv=False, add_zero_attn=False):
         return MultiheadTPRAttention(
             embed_dim,
             num_heads=args.decoder_attention_heads,
-            role_weights_input=args.decoder_role_weights_input,
+            role_weights_input=role_weights_input,
             num_roles=num_roles,
             dropout=args.attention_dropout,
             add_bias_kv=add_bias_kv,
@@ -234,11 +235,11 @@ class TPRTransformerDecoderLayer(nn.Module):
             qn_block_size=self.quant_noise_block_size,
         )
 
-    def build_encoder_attention(self, embed_dim, num_roles, args):
+    def build_encoder_attention(self, embed_dim, num_roles, role_weights_input, args):
         return MultiheadTPRAttention(
             embed_dim,
             num_heads=args.decoder_attention_heads,
-            role_weights_input=args.decoder_role_weights_input,
+            role_weights_input=role_weights_input,
             num_roles=num_roles,
             kdim=getattr(args, "encoder_embed_dim", None),
             vdim=getattr(args, "encoder_embed_dim", None),
