@@ -46,7 +46,7 @@ def annotate(sentences):
         tok = re.sub("'[Nn]'", "and", tok)
         tok = re.sub("([^\.]+)\.", "\g<1>", tok)
         tok = re.sub("-+", "-", tok)
-        tok = re.sub("^-(.+)", "\g<1>", tok)
+        # tok = re.sub("^-(.+)", "\g<1>", tok)
         tok = re.sub("'([A-Za-ce-rt-z])", "\g<1>", tok)
         tok = re.sub("'([A-Za-z].+)", "\g<1>", tok)
         return tok

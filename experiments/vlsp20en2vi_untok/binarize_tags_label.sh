@@ -7,18 +7,16 @@
 src=en
 tgt=vi
 PROJ="."
-INPUT=$PROJ/data/vlsp20envi_untok/corpus
+INPUT=$PROJ/data/vlsp20envi_untok/tags_label
 OUTPUT=$INPUT/vlsp20${src}2${tgt}_untok
 
 # Binarize the dataset:
 python fairseq_cli/preprocess.py \
 	--source-lang $src \
 	--target-lang $tgt \
-	--trainpref $INPUT/train.tok.tok.bpe.32000 \
-	--validpref $INPUT/valid.tok.tok.bpe.32000 \
-	--testpref $INPUT/test.tok.tok.bpe.32000 \
+	--trainpref $INPUT/train \
+	--validpref $INPUT/valid \
+	--testpref $INPUT/test \
 	--destdir $OUTPUT \
 	--workers 16 \
-	--nwordssrc 16384 \
-	--nwordstgt 16384 \
-	--joined-dictionary
+	--only-source

@@ -1,6 +1,6 @@
 PROJDIR="."
 INDIR=$PROJDIR/data/vlsp20envi_untok/corpus
-OUTDIR=$PROJDIR/data/vlsp20envi_untok/tags_mean
+OUTDIR=$PROJDIR/data/vlsp20envi_untok/tags_label
 lang=en
 TRAIN=train.tok.tok.bpe.32000.$lang
 VALID=valid.tok.tok.bpe.32000.$lang
@@ -12,11 +12,11 @@ mkdir -p $OUTDIR
 size=10000
 i=0
 
-python $SCRIPTSDIR/bpe_tags_mean.py $lang $INDIR/$TEST $OUTDIR/test.$lang $size $i &
-python $SCRIPTSDIR/bpe_tags_mean.py $lang $INDIR/$VALID $OUTDIR/valid.$lang $size $i &
+python $SCRIPTSDIR/bpe_tags_label.py $lang $INDIR/$TEST $OUTDIR/test.$lang $size $i &
+python $SCRIPTSDIR/bpe_tags_label.py $lang $INDIR/$VALID $OUTDIR/valid.$lang $size $i &
 
 for i in {0..5}; do
-  python $SCRIPTSDIR/bpe_tags_mean.py $lang $INDIR/$TRAIN $OUTDIR/train.$lang.$i $size $i &
+  python $SCRIPTSDIR/bpe_tags_label.py $lang $INDIR/$TRAIN $OUTDIR/train.$lang.$i $size $i &
 done
 
 wait

@@ -11,6 +11,7 @@ def tokenize_en(sent):
     sent = html.unescape(sent.strip())
     sent = re.sub('([\.!?])([A-Z])', '\g<1> \g<2>', sent)
     sent = ' '.join(parser.tokenize(sent))
+    sent = ' '.join(parser.tokenize(sent))  # tokenize twice to split in case "2pm",... to "2 pm",...
     return sent
 
 

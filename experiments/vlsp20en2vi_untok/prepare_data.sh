@@ -32,7 +32,7 @@ done
 wait
 
 # Learn Shared BPE
-for merge_ops in 16000; do
+for merge_ops in 32000; do
   echo "Learning BPE with merge_ops=${merge_ops}. This may take a while..."
   cat "${OUTPUT_DIR}/train.tok.tok.vi" "${OUTPUT_DIR}/train.tok.tok.en" | \
     ${BPE_DIR}/subword_nmt/learn_bpe.py -s $merge_ops > "${OUTPUT_DIR}/bpe.${merge_ops}"
