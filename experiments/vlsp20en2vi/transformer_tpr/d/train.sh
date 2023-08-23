@@ -13,6 +13,8 @@ CKPTS=./experiments/vlsp20en2vi/transformer_tpr/d/train_log
 params="$DATADIR \
 --save-dir $CKPTS \
 --num_roles 50 \
+--encoder_role_weights_input query \
+--decoder_role_weights_input query \
 --arch tpr_transformer \
 --dropout 0.1 \
 --share-all-embeddings \

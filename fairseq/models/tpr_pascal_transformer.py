@@ -9,6 +9,7 @@ Date last modified:
 """
 
 import math
+import sys
 from typing import Dict, List, Optional, Tuple, Any
 
 import numpy as np
@@ -19,19 +20,20 @@ from torch import Tensor
 
 from fairseq import utils, options
 from fairseq.models import (
-    FairseqTagsEncoder,
     FairseqTagsModel,
     register_model,
     register_model_architecture, FairseqIncrementalDecoder,
 )
+from fairseq.models.fairseq_deps_tags_encoder import FairseqDepsTagsEncoder
 from fairseq.models.fairseq_encoder import EncoderOut
+from fairseq.models.fairseq_model import FairseqDepsTagsModel
 from fairseq.modules import (
     LayerDropModuleList,
     LayerNorm,
     PositionalEmbedding,
     SinusoidalPositionalEmbedding,
     TPRPascalTransformerEncoderLayer,
-    TPRTransformerEncoderLayer, AdaptiveSoftmax, TPRTransformerDecoderLayer,
+    TPRTransformerEncoderLayer, AdaptiveSoftmax, TPRTransformerDecoderLayer, TransformerDecoderLayer,
 )
 from fairseq.modules.quant_noise import quant_noise as apply_quant_noise_
 
@@ -40,7 +42,7 @@ DEFAULT_MAX_TARGET_POSITIONS = 1024
 
 
 @register_model("tpr_pascal_transformer")
-class TPRPascalTransformerModel(FairseqTagsModel):
+class TPRPascalTransformerModel(FairseqDepsTagsModel):
     """
     Transformer model from `"Attention Is All You Need" (Vaswani, et al, 2017)
     <https://arxiv.org/abs/1706.03762>`_.
@@ -187,8 +189,10 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         # args for tpr product
         parser.add_argument('--num_roles', type=int, metavar='N', default=None,
                             help='number of roles embedded in role embeddings')
-        parser.add_argument('--role_weights_input', type=str, choices=['query', 'v_bar'],
-                            help='input for role weights embedding')
+        parser.add_argument('--encoder_role_weights_input', type=str, metavar='STR', choices=['v_bar', 'query', 'dependency'],
+                            help='the input for the TPR product in encoder: v_bar or query')
+        parser.add_argument('--decoder_role_weights_input', type=str, metavar='STR', choices=['v_bar', 'query'],
+                            help='the input for the TPR product in decoder: v_bar or query')
         # fmt: on
 
     @classmethod
@@ -208,7 +212,8 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         if getattr(args, "max_target_positions", None) is None:
             args.max_target_positions = DEFAULT_MAX_TARGET_POSITIONS
 
-        src_dict, tgt_dict, src_tags_dict = task.source_dictionary, task.target_dictionary, task.source_tags_dictionary
+        src_dict, tgt_dict, src_tags_dict, src_deps_dict = \
+            task.source_dictionary, task.target_dictionary, task.source_tags_dictionary, task.source_deps_dictionary
 
         if args.share_all_embeddings:
             if src_dict != tgt_dict:
@@ -236,7 +241,7 @@ class TPRPascalTransformerModel(FairseqTagsModel):
                 args, tgt_dict, args.decoder_embed_dim, args.decoder_embed_path
             )
 
-        encoder = cls.build_encoder(args, src_dict, encoder_embed_tokens, src_tags_dict)
+        encoder = cls.build_encoder(args, src_dict, encoder_embed_tokens, src_tags_dict, src_deps_dict)
         decoder = cls.build_decoder(args, tgt_dict, decoder_embed_tokens)
         return cls(args, encoder, decoder)
 
@@ -253,8 +258,8 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         return emb
 
     @classmethod
-    def build_encoder(cls, args, src_dict, embed_tokens, tags_dictionary, left_pad=True):
-        return TPRPascalTransformerEncoder(args, src_dict, embed_tokens, tags_dictionary, left_pad)
+    def build_encoder(cls, args, src_dict, embed_tokens, tags_dictionary, deps_dictionary, left_pad=True):
+        return TPRPascalTransformerEncoder(args, src_dict, embed_tokens, tags_dictionary, deps_dictionary, left_pad)
 
     @classmethod
     def build_decoder(cls, args, tgt_dict, embed_tokens):
@@ -272,6 +277,7 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         src_tokens,
         src_lengths,
         src_tags,
+        src_deps,
         prev_output_tokens,
         return_all_hiddens: bool = True,
         features_only: bool = False,
@@ -285,7 +291,9 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         which are not supported by TorchScript.
         """
         encoder_out = self.encoder(
-            src_tokens, src_lengths=src_lengths, src_tags=src_tags, return_all_hiddens=return_all_hiddens
+            src_tokens, src_lengths=src_lengths,
+            src_tags=src_tags, src_deps=src_deps,
+            return_all_hiddens=return_all_hiddens
         )
         decoder_out = self.decoder(
             prev_output_tokens,
@@ -312,7 +320,7 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         return self.get_normalized_probs_scriptable(net_output, log_probs, sample)
 
 
-class TPRPascalTransformerEncoder(FairseqTagsEncoder):
+class TPRPascalTransformerEncoder(FairseqDepsTagsEncoder):
     """
     Transformer encoder consisting of *args.encoder_layers* layers. Each layer
     is a :class:`TransformerEncoderLayer`.
@@ -323,17 +331,24 @@ class TPRPascalTransformerEncoder(FairseqTagsEncoder):
         embed_tokens (torch.nn.Embedding): input embedding
     """
 
-    def __init__(self, args, dictionary, embed_tokens, tags_dictionary, left_pad=True):
-        super().__init__(dictionary, tags_dictionary)
+    def __init__(self, args, dictionary, embed_tokens, tags_dictionary, deps_dictionary, left_pad=True):
+        super().__init__(dictionary, tags_dictionary, deps_dictionary)
         self.register_buffer("version", torch.Tensor([3]))
 
         self.dropout = args.dropout
         self.encoder_layerdrop = args.encoder_layerdrop
 
-        self.map_dictionary = dict()
+        self.tags_map_dictionary = dict()
         for k, v in tags_dictionary.indices.items():
             try:
-                self.map_dictionary[v] = float(k)
+                self.tags_map_dictionary[v] = float(k)
+            except:
+                pass
+
+        self.deps_map_dictionary = dict()
+        for k, v in deps_dictionary.indices.items():
+            try:
+                self.deps_map_dictionary[v] = float(k)
             except:
                 pass
 
@@ -377,7 +392,7 @@ class TPRPascalTransformerEncoder(FairseqTagsEncoder):
         else:
             self.layers = nn.ModuleList([])
         self.layers.extend(
-            [self.build_encoder_layer(args, h, args.num_roles) if h != 0 else TPRTransformerEncoderLayer(args, args.num_roles)
+            [self.build_encoder_layer(args, h, args.num_roles)
              for h in self.encoder_pascal_heads]
         )
         self.num_layers = len(self.layers)
@@ -391,8 +406,11 @@ class TPRPascalTransformerEncoder(FairseqTagsEncoder):
         else:
             self.layernorm_embedding = None
 
-    def build_encoder_layer(self, args, h, num_roles):
-        return TPRPascalTransformerEncoderLayer(args, h, num_roles)
+    @staticmethod
+    def build_encoder_layer(args, h, num_roles):
+        if h != 0:
+            return TPRPascalTransformerEncoderLayer(args, h, num_roles)
+        return TPRTransformerEncoderLayer(args, num_roles, role_weights_input='v_bar')
 
     def forward_embedding(self, src_tokens):
         # embed tokens and positions
@@ -406,7 +424,7 @@ class TPRPascalTransformerEncoder(FairseqTagsEncoder):
             x = self.quant_noise(x)
         return x, embed
 
-    def forward(self, src_tokens, src_lengths, src_tags, return_all_hiddens: bool = False):
+    def forward(self, src_tokens, src_lengths, src_tags, src_deps, return_all_hiddens: bool = False):
         """
         Args:
             src_tokens (LongTensor): tokens in the source language of shape
@@ -438,7 +456,21 @@ class TPRPascalTransformerEncoder(FairseqTagsEncoder):
 
         maxlen = src_tags.size(1) - 1
         src_tags = src_tags.detach().cpu().numpy()
-        parents = torch.cuda.FloatTensor(np.vectorize(lambda e: self.map_dictionary.get(e, maxlen))(src_tags))
+        parents = torch.cuda.FloatTensor(np.vectorize(lambda e: self.tags_map_dictionary.get(e, maxlen))(src_tags))
+
+        src_deps = src_deps.transpose(0, 1)
+        #
+        # print(self.tags_map_dictionary)
+        # print("Parent: ", parents)
+        # print(parents.size())
+        # print(parents.max())
+        # print(parents.min())
+        # print(self.deps_map_dictionary)
+        # print("Dependency: ", src_deps)
+        # print(src_deps.size())
+        # print(src_deps.max())
+        # print(src_deps.min())
+        # sys.exit(0)
 
         encoder_states = [] if return_all_hiddens else None
 
@@ -451,7 +483,7 @@ class TPRPascalTransformerEncoder(FairseqTagsEncoder):
 
         for i, h in enumerate(self.encoder_pascal_heads):
             if h != 0:
-                x = self.layers[i](x, encoder_padding_mask, parents)
+                x = self.layers[i](x, encoder_padding_mask, parents, dependency=src_deps)
             else:
                 x = self.layers[i](x, encoder_padding_mask)
 
@@ -677,8 +709,9 @@ class TPRTransformerDecoder(FairseqIncrementalDecoder):
 
     @staticmethod
     def build_decoder_layer(args, num_roles, no_encoder_attn=False):
-        return TPRTransformerDecoderLayer(args, num_roles, no_encoder_attn)
-
+        if args.decoder_role_weights_input is not None:
+            return TPRTransformerDecoderLayer(args, num_roles, args.decoder_role_weights_input, no_encoder_attn)
+        return TransformerDecoderLayer(args, no_encoder_attn)
     def forward(
         self,
         prev_output_tokens,

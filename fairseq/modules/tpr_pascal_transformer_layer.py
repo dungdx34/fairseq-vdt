@@ -72,7 +72,7 @@ class TPRPascalTransformerEncoderLayer(nn.Module):
         return MultiheadTPRPascal(
             embed_dim,
             num_heads=args.encoder_attention_heads,
-            role_weights_input=args.role_weights_input,
+            role_weights_input=args.encoder_role_weights_input,
             num_roles=num_roles,
             dropout=args.attention_dropout,
             parent_ignoring=args.parent_ignoring,
@@ -98,7 +98,7 @@ class TPRPascalTransformerEncoderLayer(nn.Module):
                     state_dict["{}.{}.{}".format(name, new, m)] = state_dict[k]
                     del state_dict[k]
 
-    def forward(self, x, encoder_padding_mask, parents, attn_mask: Optional[Tensor] = None):
+    def forward(self, x, encoder_padding_mask, parents, dependency, attn_mask: Optional[Tensor] = None):
         """
         Args:
             x (Tensor): input to the layer of shape `(seq_len, batch, embed_dim)`
@@ -130,6 +130,7 @@ class TPRPascalTransformerEncoderLayer(nn.Module):
             key=x,
             value=x,
             parents=parents,
+            dependency=dependency,
             key_padding_mask=encoder_padding_mask,
             attn_mask=attn_mask,
         )

@@ -82,11 +82,13 @@ class MultiheadTPRPascal(nn.Module):
         if self.num_roles is None:
             self.role_proj = quant_noise(nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size)
         else:
-            assert role_weights_input in ['query', 'v_bar']
+            assert role_weights_input in ['query', 'v_bar', 'dependency']
             self.role_weights_input = role_weights_input
-
-            self.role_proj = quant_noise(nn.Linear(embed_dim, self.num_heads * self.num_roles, bias=True), q_noise, qn_block_size)
-            self.role_embeddings = nn.Parameter(torch.zeros(self.num_roles, self.head_dim))
+            if self.role_weights_input == 'dependency':
+                self.role_embeddings = nn.Embedding(self.num_roles, embed_dim, padding_idx=0)
+            else:
+                self.role_proj = quant_noise(nn.Linear(embed_dim, self.num_heads * self.num_roles, bias=True), q_noise, qn_block_size)
+                self.role_embeddings = nn.Parameter(torch.zeros(self.num_roles, self.head_dim))
             self.tpr_norm = LayerNorm(embed_dim)
 
         self.out_proj = quant_noise(nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size)
@@ -128,9 +130,9 @@ class MultiheadTPRPascal(nn.Module):
             nn.init.xavier_uniform_(self.v_proj.weight)
             nn.init.xavier_uniform_(self.q_proj.weight)
 
-        nn.init.xavier_uniform_(self.role_proj.weight)
-        if self.num_roles is not None:
+        if self.num_roles is not None and self.role_weights_input != 'dependency':
             nn.init.xavier_uniform_(self.role_embeddings)
+            nn.init.xavier_uniform_(self.role_proj.weight)
 
         nn.init.xavier_uniform_(self.out_proj.weight)
         if self.out_proj.bias is not None:
@@ -154,6 +156,7 @@ class MultiheadTPRPascal(nn.Module):
         key: Optional[Tensor],
         value: Optional[Tensor],
         parents,
+        dependency,
         key_padding_mask: Optional[Tensor] = None,
         incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
         need_weights: bool = True,
@@ -385,19 +388,23 @@ class MultiheadTPRPascal(nn.Module):
             attn = attn.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
 
         if self.num_roles is not None:
-            role_matrix = self.role_embeddings / torch.norm(self.role_embeddings, dim=1,
-                                                            keepdim=True)  # normalize role embeddings
-            if self.role_weights_input == 'v_bar':
-                role_attn_weights = self.role_proj(attn)  # (tgt_len, bsz, num_heads*num_roles)
-            else:  # role_weights_input is query
-                role_attn_weights = self.role_proj(query)
-            role_attn_weights = role_attn_weights \
-                .contiguous() \
-                .view(tgt_len, bsz * self.num_heads, self.num_roles) \
-                .transpose(0, 1)
-            role_attn_weights = F.softmax(role_attn_weights, dim=-1)
-            R_out = torch.matmul(role_attn_weights, role_matrix)  # (bsz * num_heads, tgt_len, head_dim)
-            R_out = R_out.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
+            if self.role_weights_input == 'dependency':
+                assert dependency is not None
+                R_out = self.role_embeddings(dependency)
+            else:
+                role_matrix = self.role_embeddings / torch.norm(self.role_embeddings, dim=1,
+                                                                keepdim=True)  # normalize role embeddings
+                if self.role_weights_input == 'v_bar':
+                    role_attn_weights = self.role_proj(attn)  # (tgt_len, bsz, num_heads*num_roles)
+                else:
+                    role_attn_weights = self.role_proj(query)
+                role_attn_weights = role_attn_weights \
+                    .contiguous() \
+                    .view(tgt_len, bsz * self.num_heads, self.num_roles) \
+                    .transpose(0, 1)
+                role_attn_weights = F.softmax(role_attn_weights, dim=-1)
+                R_out = torch.matmul(role_attn_weights, role_matrix)  # (bsz * num_heads, tgt_len, head_dim)
+                R_out = R_out.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
             R_out = F.dropout(R_out, p=self.dropout, training=self.training)
             attn = attn + torch.mul(R_out, attn)
             attn = self.tpr_norm(attn)

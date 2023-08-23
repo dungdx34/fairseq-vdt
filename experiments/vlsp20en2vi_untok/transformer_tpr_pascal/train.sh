@@ -6,13 +6,16 @@
 
 DATADIR=./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok
 TAGSDIR=./data/vlsp20envi_untok/tags_mean/vlsp20en2vi_untok
+DEPSDIR=./data/vlsp20envi_untok/tags_label/vlsp20en2vi_untok
 CKPTS=./experiments/vlsp20en2vi_untok/transformer_tpr_pascal/train_log
 
-params="./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok \
---save-dir ./experiments/vlsp20en2vi_untok/transformer_tpr_pascal/train_log \
---tags-data ./data/vlsp20envi_untok/tags_mean/vlsp20en2vi_untok \
+params="$DATADIR \
+--save-dir $CKPTS \
+--tags-data $TAGSDIR \
+--deps-data $DEPSDIR \
 --num_roles 50 \
---role_weights_input query \
+--encoder_role_weights_input dependency \
+--decoder_role_weights_input v_bar \
 --encoder-pascal-heads 7 0 0 0 0 0 \
 --dropout 0.3 \
 --parent-ignoring 0.3 \
@@ -24,7 +27,7 @@ params="./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok \
 --lr-scheduler inverse_sqrt \
 --warmup-init-lr 1e-07 \
 --warmup-updates 8000 \
---lr 0.0007 \
+--lr 0.001 \
 --min-lr 1e-09 \
 --weight-decay 0.0 \
 --criterion label_smoothed_cross_entropy \
@@ -38,7 +41,7 @@ params="./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok \
 --save-interval-updates 500 \
 --keep-interval-updates 1 \
 --arch tpr_pascal_transformer \
---task tags_translation \
+--task deps_tags_translation \
 "
 
 mkdir -p $CKPTS
