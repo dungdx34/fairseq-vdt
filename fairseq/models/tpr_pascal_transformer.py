@@ -33,7 +33,7 @@ from fairseq.modules import (
     PositionalEmbedding,
     SinusoidalPositionalEmbedding,
     TPRPascalTransformerEncoderLayer,
-    TPRTransformerEncoderLayer, AdaptiveSoftmax, TPRTransformerDecoderLayer, TransformerDecoderLayer,
+    TransformerEncoderLayer, AdaptiveSoftmax, TPRTransformerDecoderLayer, TransformerDecoderLayer,
 )
 from fairseq.modules.quant_noise import quant_noise as apply_quant_noise_
 
@@ -410,7 +410,7 @@ class TPRPascalTransformerEncoder(FairseqDepsTagsEncoder):
     def build_encoder_layer(args, h, num_roles):
         if h != 0:
             return TPRPascalTransformerEncoderLayer(args, h, num_roles)
-        return TPRTransformerEncoderLayer(args, num_roles, role_weights_input='v_bar')
+        return TransformerEncoderLayer(args)
 
     def forward_embedding(self, src_tokens):
         # embed tokens and positions
