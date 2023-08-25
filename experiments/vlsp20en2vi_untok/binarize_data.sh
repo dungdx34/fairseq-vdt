@@ -19,6 +19,6 @@ python fairseq_cli/preprocess.py \
 	--testpref $INPUT/test.tok.tok.bpe.32000 \
 	--destdir $OUTPUT \
 	--workers 16 \
-	--nwordssrc 16384 \
-	--nwordstgt 16384 \
+	--nwordssrc 32768 \
+	--nwordstgt 32768 \
 	--joined-dictionary
