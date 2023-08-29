@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Created by:         Emanuele Bugliarello (@e-bug)
-# Date created:       9/4/2019
-# Date last modified: 9/4/2019
+# Created by:         Phan Dat
+# Date created:       20/8/2023
+# Date last modified: 20/8/2023
 
 export CUDA_VISIBLE_DEVICES=0
 src=en

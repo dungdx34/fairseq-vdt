@@ -4,6 +4,7 @@ tgt=vi
 PROJ_PATH=./experiments/vlsp20${src}2${tgt}_untok
 DATA_PATH=./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok
 TAGS_PATH=./data/vlsp20envi_untok/tags_mean/vlsp20en2vi_untok
+DEPS_PATH=./data/vlsp20envi_untok/tags_label/vlsp20en2vi_untok
 CKPT_PATH=$PROJ_PATH/transformer_tpr_pascal_with_dep/train_log
 MODEL_DIR=$PROJ_PATH/transformer_tpr_pascal_with_dep
 OUTPUT_FN=$MODEL_DIR/res.txt
@@ -14,8 +15,9 @@ mkdir -p $MODEL_DIR/outputs
 for split in valid test; do
   python ./fairseq_cli/generate.py $DATA_PATH \
   	  --tags-data $TAGS_PATH \
+  	  --deps-data $DEPS_PATH \
           --gen-subset $split \
-          --task tags_translation \
+          --task deps_tags_translation \
           --path $CKPT_PATH/checkpoint_last.pt \
           --batch-size 128 \
 	  --remove-bpe \

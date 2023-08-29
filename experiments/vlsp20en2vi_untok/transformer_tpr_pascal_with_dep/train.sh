@@ -6,20 +6,15 @@
 
 DATADIR=./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok
 TAGSDIR=./data/vlsp20envi_untok/tags_mean/vlsp20en2vi_untok
-CKPTS=./experiments/vlsp20en2vi_untok/transformer_pascal/train_log
-#export CUDA_VISIBLE_DEVICES=0,1,2,3
-
-#NODES=$1
-#GPUS=$2
-#WORLD_SIZE=$[NODES * GPUS]
-#MASTER=$(head -n 1 ./hosts)
-#hosts=`cat ./hosts`
-#h=0
-#n=0
+DEPSDIR=./data/vlsp20envi_untok/tags_label/vlsp20en2vi_untok
+CKPTS=./experiments/vlsp20en2vi_untok/transformer_tpr_pascal_with_dep/train_log
 
 params="$DATADIR \
 --save-dir $CKPTS \
 --tags-data $TAGSDIR \
+--deps-data $DEPSDIR \
+--num_roles 50 \
+--decoder_role_weights_input v_bar \
 --encoder-pascal-heads 7 0 0 0 0 0 \
 --dropout 0.3 \
 --parent-ignoring 0.3 \
@@ -31,7 +26,7 @@ params="$DATADIR \
 --lr-scheduler inverse_sqrt \
 --warmup-init-lr 1e-07 \
 --warmup-updates 8000 \
---lr 0.0007 \
+--lr 0.001 \
 --min-lr 1e-09 \
 --weight-decay 0.0 \
 --criterion label_smoothed_cross_entropy \
@@ -44,24 +39,12 @@ params="$DATADIR \
 --save-interval 500000 \
 --save-interval-updates 500 \
 --keep-interval-updates 1 \
---arch pascal_transformer \
---task tags_translation \
+--arch tpr_pascal_transformer_with_dep \
+--task deps_tags_translation \
 "
 
 mkdir -p $CKPTS
 
-#for line in $hosts; do
-#  if [ $line = $HOSTNAME ]; then
-#    start_=$n
-#    end_=$[n + GPUS - 1]
-#    GPU_RANKS=`seq -s' ' $start_ $end_`
-#    for gpu in `seq $[GPUS - 1]`; do
-#      python train.py $params --distributed-world-size $WORLD_SIZE --distributed-init-method tcp://$MASTER:10000 --distributed-rank $[n + gpu - 1] --device-id $[gpu - 1] &
-#    done
-#    python train.py $params --distributed-world-size $WORLD_SIZE --distributed-init-method tcp://$MASTER:10000 --distributed-rank $[n + GPUS - 1] --device-id $[GPUS - 1]
-#  fi
-#  h=$[h + 1]
-#  n=$[n + GPUS]
-#done
-
 python train.py $params
+
+read -p "Exit..."

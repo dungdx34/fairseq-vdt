@@ -4,11 +4,12 @@
 # LICENSE file in the root directory of this source tree.
 """
 Created by:         Phan Dat
-Date created:       29/8/2023
+Date created:       2/8/2023
 Date last modified:
 """
 
 import math
+import sys
 from typing import Dict, List, Optional, Tuple, Any
 
 import numpy as np
@@ -19,12 +20,12 @@ from torch import Tensor
 
 from fairseq import utils, options
 from fairseq.models import (
-    FairseqTagsModel,
     register_model,
-    register_model_architecture, FairseqIncrementalDecoder, FairseqTagsEncoder,
+    register_model_architecture, FairseqIncrementalDecoder,
 )
+from fairseq.models.fairseq_deps_tags_encoder import FairseqDepsTagsEncoder
 from fairseq.models.fairseq_encoder import EncoderOut
-from fairseq.models.pascal_transformer import PascalTransformerEncoder
+from fairseq.models.fairseq_model import FairseqDepsTagsModel
 from fairseq.modules import (
     LayerDropModuleList,
     LayerNorm,
@@ -39,8 +40,8 @@ DEFAULT_MAX_SOURCE_POSITIONS = 1024
 DEFAULT_MAX_TARGET_POSITIONS = 1024
 
 
-@register_model("tpr_pascal_transformer")
-class TPRPascalTransformerModel(FairseqTagsModel):
+@register_model("tpr_pascal_transformer_with_dep")
+class TPRPascalTransformerModelWithDep(FairseqDepsTagsModel):
     """
     Transformer model from `"Attention Is All You Need" (Vaswani, et al, 2017)
     <https://arxiv.org/abs/1706.03762>`_.
@@ -187,8 +188,6 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         # args for tpr product
         parser.add_argument('--num_roles', type=int, metavar='N', default=None,
                             help='number of roles embedded in role embeddings')
-        parser.add_argument('--encoder_role_weights_input', type=str, metavar='STR', choices=['v_bar', 'query'],
-                            help='the input for the TPR product in encoder: v_bar or query')
         parser.add_argument('--decoder_role_weights_input', type=str, metavar='STR', choices=['v_bar', 'query'],
                             help='the input for the TPR product in decoder: v_bar or query')
         # fmt: on
@@ -210,7 +209,8 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         if getattr(args, "max_target_positions", None) is None:
             args.max_target_positions = DEFAULT_MAX_TARGET_POSITIONS
 
-        src_dict, tgt_dict, src_tags_dict = task.source_dictionary, task.target_dictionary, task.source_tags_dictionary
+        src_dict, tgt_dict, src_tags_dict, src_deps_dict = \
+            task.source_dictionary, task.target_dictionary, task.source_tags_dictionary, task.source_deps_dictionary
 
         if args.share_all_embeddings:
             if src_dict != tgt_dict:
@@ -238,7 +238,7 @@ class TPRPascalTransformerModel(FairseqTagsModel):
                 args, tgt_dict, args.decoder_embed_dim, args.decoder_embed_path
             )
 
-        encoder = cls.build_encoder(args, src_dict, encoder_embed_tokens, src_tags_dict)
+        encoder = cls.build_encoder(args, src_dict, encoder_embed_tokens, src_tags_dict, src_deps_dict)
         decoder = cls.build_decoder(args, tgt_dict, decoder_embed_tokens)
         return cls(args, encoder, decoder)
 
@@ -255,8 +255,8 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         return emb
 
     @classmethod
-    def build_encoder(cls, args, src_dict, embed_tokens, tags_dictionary, left_pad=True):
-        return PascalTransformerEncoder(args, src_dict, embed_tokens, tags_dictionary, left_pad)
+    def build_encoder(cls, args, src_dict, embed_tokens, tags_dictionary, deps_dictionary, left_pad=True):
+        return TPRPascalTransformerEncoder(args, src_dict, embed_tokens, tags_dictionary, deps_dictionary, left_pad)
 
     @classmethod
     def build_decoder(cls, args, tgt_dict, embed_tokens):
@@ -274,6 +274,7 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         src_tokens,
         src_lengths,
         src_tags,
+        src_deps,
         prev_output_tokens,
         return_all_hiddens: bool = True,
         features_only: bool = False,
@@ -288,7 +289,7 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         """
         encoder_out = self.encoder(
             src_tokens, src_lengths=src_lengths,
-            src_tags=src_tags,
+            src_tags=src_tags, src_deps=src_deps,
             return_all_hiddens=return_all_hiddens
         )
         decoder_out = self.decoder(
@@ -316,7 +317,7 @@ class TPRPascalTransformerModel(FairseqTagsModel):
         return self.get_normalized_probs_scriptable(net_output, log_probs, sample)
 
 
-class TPRPascalTransformerEncoder(FairseqTagsEncoder):
+class TPRPascalTransformerEncoder(FairseqDepsTagsEncoder):
     """
     Transformer encoder consisting of *args.encoder_layers* layers. Each layer
     is a :class:`TransformerEncoderLayer`.
@@ -327,8 +328,8 @@ class TPRPascalTransformerEncoder(FairseqTagsEncoder):
         embed_tokens (torch.nn.Embedding): input embedding
     """
 
-    def __init__(self, args, dictionary, embed_tokens, tags_dictionary, left_pad=True):
-        super().__init__(dictionary, tags_dictionary)
+    def __init__(self, args, dictionary, embed_tokens, tags_dictionary, deps_dictionary, left_pad=True):
+        super().__init__(dictionary, tags_dictionary, deps_dictionary)
         self.register_buffer("version", torch.Tensor([3]))
 
         self.dropout = args.dropout
@@ -338,6 +339,13 @@ class TPRPascalTransformerEncoder(FairseqTagsEncoder):
         for k, v in tags_dictionary.indices.items():
             try:
                 self.tags_map_dictionary[v] = float(k)
+            except:
+                pass
+
+        self.deps_map_dictionary = dict()
+        for k, v in deps_dictionary.indices.items():
+            try:
+                self.deps_map_dictionary[v] = str(k)
             except:
                 pass
 
@@ -413,7 +421,7 @@ class TPRPascalTransformerEncoder(FairseqTagsEncoder):
             x = self.quant_noise(x)
         return x, embed
 
-    def forward(self, src_tokens, src_lengths, src_tags, return_all_hiddens: bool = False):
+    def forward(self, src_tokens, src_lengths, src_tags, src_deps, return_all_hiddens: bool = False):
         """
         Args:
             src_tokens (LongTensor): tokens in the source language of shape
@@ -447,6 +455,20 @@ class TPRPascalTransformerEncoder(FairseqTagsEncoder):
         src_tags = src_tags.detach().cpu().numpy()
         parents = torch.cuda.FloatTensor(np.vectorize(lambda e: self.tags_map_dictionary.get(e, maxlen))(src_tags))
 
+        src_deps = src_deps.transpose(0, 1)
+        #
+        # print(self.tags_map_dictionary)
+        # print("Parent: ", parents)
+        # print(parents.size())
+        # print(parents.max())
+        # print(parents.min())
+        # print(self.deps_map_dictionary)
+        # print("Dependency: ", src_deps)
+        # print(src_deps.size())
+        # print(src_deps.max())
+        # print(src_deps.min())
+        # sys.exit(0)
+
         encoder_states = [] if return_all_hiddens else None
 
         # encoder layers
@@ -458,7 +480,7 @@ class TPRPascalTransformerEncoder(FairseqTagsEncoder):
 
         for i, h in enumerate(self.encoder_pascal_heads):
             if h != 0:
-                x = self.layers[i](x, encoder_padding_mask, parents)
+                x = self.layers[i](x, encoder_padding_mask, parents, dependency=src_deps)
             else:
                 x = self.layers[i](x, encoder_padding_mask)
 
@@ -951,7 +973,7 @@ def Linear(in_features, out_features, bias=True):
     return m
 
 
-@register_model_architecture("tpr_pascal_transformer", "tpr_pascal_transformer")
+@register_model_architecture("tpr_pascal_transformer_with_dep", "tpr_pascal_transformer_with_dep")
 def base_architecture(args):
     args.encoder_embed_path = getattr(args, "encoder_embed_path", None)
     args.encoder_embed_dim = getattr(args, "encoder_embed_dim", 512)
@@ -996,7 +1018,7 @@ def base_architecture(args):
     args.tie_adaptive_weights = getattr(args, "tie_adaptive_weights", False)
 
 
-@register_model_architecture("tpr_pascal_transformer", "tpr_pascal_transformer_iwslt_de_en")
+@register_model_architecture("tpr_pascal_transformer_with_dep", "tpr_pascal_transformer_with_dep_iwslt_de_en")
 def transformer_iwslt_de_en(args):
     args.encoder_embed_dim = getattr(args, "encoder_embed_dim", 512)
     args.encoder_ffn_embed_dim = getattr(args, "encoder_ffn_embed_dim", 1024)
@@ -1009,13 +1031,13 @@ def transformer_iwslt_de_en(args):
     base_architecture(args)
 
 
-@register_model_architecture("tpr_pascal_transformer", "tpr_pascal_transformer_wmt_en_de")
+@register_model_architecture("tpr_pascal_transformer_with_dep", "tpr_pascal_transformer_with_dep_wmt_en_de")
 def transformer_wmt_en_de(args):
     base_architecture(args)
 
 
 # parameters used in the "Attention Is All You Need" paper (Vaswani et al., 2017)
-@register_model_architecture("tpr_pascal_transformer", "tpr_pascal_transformer_vaswani_wmt_en_de_big")
+@register_model_architecture("tpr_pascal_transformer_with_dep", "tpr_pascal_transformer_with_dep_vaswani_wmt_en_de_big")
 def transformer_vaswani_wmt_en_de_big(args):
     args.encoder_embed_dim = getattr(args, "encoder_embed_dim", 1024)
     args.encoder_ffn_embed_dim = getattr(args, "encoder_ffn_embed_dim", 4096)
@@ -1028,20 +1050,20 @@ def transformer_vaswani_wmt_en_de_big(args):
     base_architecture(args)
 
 
-@register_model_architecture("tpr_pascal_transformer", "tpr_pascal_transformer_vaswani_wmt_en_fr_big")
+@register_model_architecture("tpr_pascal_transformer_with_dep", "tpr_pascal_transformer_with_dep_vaswani_wmt_en_fr_big")
 def transformer_vaswani_wmt_en_fr_big(args):
     args.dropout = getattr(args, "dropout", 0.1)
     transformer_vaswani_wmt_en_de_big(args)
 
 
-@register_model_architecture("tpr_pascal_transformer", "tpr_pascal_transformer_wmt_en_de_big")
+@register_model_architecture("tpr_pascal_transformer_with_dep", "tpr_pascal_transformer_with_dep_wmt_en_de_big")
 def transformer_wmt_en_de_big(args):
     args.attention_dropout = getattr(args, "attention_dropout", 0.1)
     transformer_vaswani_wmt_en_de_big(args)
 
 
 # default parameters used in tensor2tensor implementation
-@register_model_architecture("tpr_pascal_transformer", "tpr_pascal_transformer_wmt_en_de_big_t2t")
+@register_model_architecture("tpr_pascal_transformer_with_dep", "tpr_pascal_transformer_with_dep_wmt_en_de_big_t2t")
 def transformer_wmt_en_de_big_t2t(args):
     args.encoder_normalize_before = getattr(args, "encoder_normalize_before", True)
     args.decoder_normalize_before = getattr(args, "decoder_normalize_before", True)

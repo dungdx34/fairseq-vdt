@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Created by:         Emanuele Bugliarello (@e-bug)
-# Date created:       9/4/2019
-# Date last modified: 9/4/2019
+# Created by:         Phan Dat
+# Date created:       20/8/2023
+# Date last modified: 20/8/2023
 
 DATADIR=./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok
 CKPTS=./experiments/vlsp20en2vi_untok/transformer/train_log

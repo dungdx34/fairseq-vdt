@@ -1,22 +1,20 @@
 #!/bin/bash
 
-# Created by:         Emanuele Bugliarello (@e-bug)
-# Date created:       9/4/2019
-# Date last modified: 9/4/2019
+# Created by:         Phan Dat
+# Date created:       20/8/2023
+# Date last modified: 20/8/2023
 
 DATADIR=./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok
 TAGSDIR=./data/vlsp20envi_untok/tags_mean/vlsp20en2vi_untok
-DEPSDIR=./data/vlsp20envi_untok/tags_label/vlsp20en2vi_untok
-CKPTS=./experiments/vlsp20en2vi_untok/transformer_tpr_pascal/train_log
+CKPTS=./experiments/vlsp20en2vi_untok/transformer_tpr_pascal_with_dep/train_log
 
 params="$DATADIR \
 --save-dir $CKPTS \
 --tags-data $TAGSDIR \
---deps-data $DEPSDIR \
 --num_roles 50 \
---encoder_role_weights_input dependency \
+--encoder_role_weights_input v_bar \
 --decoder_role_weights_input v_bar \
---encoder-pascal-heads 6 0 0 0 0 0 \
+--encoder-pascal-heads 7 0 0 0 0 0 \
 --dropout 0.3 \
 --parent-ignoring 0.3 \
 --share-all-embeddings \
@@ -41,7 +39,7 @@ params="$DATADIR \
 --save-interval-updates 500 \
 --keep-interval-updates 1 \
 --arch tpr_pascal_transformer \
---task deps_tags_translation \
+--task tags_translation \
 "
 
 mkdir -p $CKPTS
