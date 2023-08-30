@@ -6,13 +6,12 @@
 
 DATADIR=./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok
 TAGSDIR=./data/vlsp20envi_untok/tags_mean/vlsp20en2vi_untok
-CKPTS=./experiments/vlsp20en2vi_untok/transformer_tpr_pascal_with_dep/train_log
+CKPTS=./experiments/vlsp20en2vi_untok/transformer_tpr_pascal/train_log
 
 params="$DATADIR \
 --save-dir $CKPTS \
 --tags-data $TAGSDIR \
 --num_roles 50 \
---encoder_role_weights_input v_bar \
 --decoder_role_weights_input v_bar \
 --encoder-pascal-heads 7 0 0 0 0 0 \
 --dropout 0.3 \

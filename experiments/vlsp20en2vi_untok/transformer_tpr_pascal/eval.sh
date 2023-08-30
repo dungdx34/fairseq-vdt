@@ -4,8 +4,8 @@ tgt=vi
 PROJ_PATH=./experiments/vlsp20${src}2${tgt}_untok
 DATA_PATH=./data/vlsp20envi_untok/corpus/vlsp20en2vi_untok
 TAGS_PATH=./data/vlsp20envi_untok/tags_mean/vlsp20en2vi_untok
-CKPT_PATH=$PROJ_PATH/transformer_tpr_pascal_with_dep/train_log
-MODEL_DIR=$PROJ_PATH/transformer_tpr_pascal_with_dep
+CKPT_PATH=$PROJ_PATH/transformer_tpr_pascal/train_log
+MODEL_DIR=$PROJ_PATH/transformer_tpr_pascal
 OUTPUT_FN=$MODEL_DIR/res.txt
 mosesdecoder=./tools/mosesdecoder
 
