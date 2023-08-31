@@ -14,6 +14,7 @@ params="$DATADIR \
 --tags-data $TAGSDIR \
 --deps-data $DEPSDIR \
 --num_roles 50 \
+--encoder_role_weights_input dependency \
 --decoder_role_weights_input v_bar \
 --encoder-pascal-heads 7 0 0 0 0 0 \
 --dropout 0.3 \

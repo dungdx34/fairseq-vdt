@@ -188,6 +188,8 @@ class TPRPascalTransformerModelWithDep(FairseqDepsTagsModel):
         # args for tpr product
         parser.add_argument('--num_roles', type=int, metavar='N', default=None,
                             help='number of roles embedded in role embeddings')
+        parser.add_argument('--encoder_role_weights_input', type=str, metavar='STR', choices=['v_bar', 'query', 'dependency'],
+                            help='the input for the TPR product in encoder: v_bar or query or dependency')
         parser.add_argument('--decoder_role_weights_input', type=str, metavar='STR', choices=['v_bar', 'query'],
                             help='the input for the TPR product in decoder: v_bar or query')
         # fmt: on
